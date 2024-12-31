@@ -53,6 +53,10 @@ export const auth = {
   getProfile: async () => {
     return client.get<User>('/auth/profile');
   },
+
+  getAllPlayers: async () => {
+    return client.get<User[]>('/users/players');
+  },
 };
 
 export const gameService = {
@@ -66,5 +70,9 @@ export const gameService = {
 
   getGameById: async (id: string) => {
     return client.get<Game>(`/games/${id}`);
+  },
+
+  createGameSession: async (gameId: string, players: string[]) => {
+    return client.post<Game>(`/games/${gameId}/sessions`, { players });
   },
 }; 

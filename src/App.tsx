@@ -5,6 +5,7 @@ import Profile from './pages/Profile';
 import TestConnection from './components/TestConnection';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import CreateGame from './pages/CreateGame';
 import { useAuth } from './contexts/AuthContext';
 
 // Protected Route wrapper
@@ -79,6 +80,8 @@ const App = () => {
           <Route index element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
           <Route path="test-connection" element={<TestConnection />} />
+          <Route path="games/new" element={<CreateGame />} />
+          <Route path="games/:id" element={<div>Game Details</div>} />
         </Route>
 
         {/* Catch all route */}
