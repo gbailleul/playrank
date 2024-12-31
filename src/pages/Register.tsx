@@ -1,32 +1,98 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import InputField from '../components/ui/InputField';
 
 interface ValidationErrors {
-  username?: string;
-  surname?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
 }
 
 const Register: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [surname, setSurname] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [generalError, setGeneralError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof ValidationErrors]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
 
-    // Confirm password validation only (other validations are handled by the backend)
-    if (password !== confirmPassword) {
+    // First Name validation
+    if (!formData.firstName) {
+      newErrors.firstName = 'First name is required';
+      isValid = false;
+    } else if (formData.firstName.length < 2) {
+      newErrors.firstName = 'First name must be at least 2 characters long';
+      isValid = false;
+    } else if (!/^[a-zA-Z\s-]+$/.test(formData.firstName)) {
+      newErrors.firstName = 'First name can only contain letters, spaces, and hyphens';
+      isValid = false;
+    }
+
+    // Last Name validation
+    if (!formData.lastName) {
+      newErrors.lastName = 'Last name is required';
+      isValid = false;
+    } else if (formData.lastName.length < 2) {
+      newErrors.lastName = 'Last name must be at least 2 characters long';
+      isValid = false;
+    } else if (!/^[a-zA-Z\s-]+$/.test(formData.lastName)) {
+      newErrors.lastName = 'Last name can only contain letters, spaces, and hyphens';
+      isValid = false;
+    }
+
+    // Email validation
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+      isValid = false;
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+      isValid = false;
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+      isValid = false;
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
       isValid = false;
     }
@@ -45,7 +111,9 @@ const Register: React.FC = () => {
     }
 
     try {
-      await register(username, surname, email, password);
+      // Generate a username from firstName and lastName
+      const username = `${formData.firstName.toLowerCase()}_${formData.lastName.toLowerCase()}`.replace(/\s+/g, '');
+      await register(username, formData.lastName, formData.email, formData.password);
       navigate('/');
     } catch (err: any) {
       if (err.errors) {
@@ -57,40 +125,6 @@ const Register: React.FC = () => {
       }
     }
   };
-
-  const InputField: React.FC<{
-    id: string;
-    label: string;
-    type: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    error?: string;
-    placeholder: string;
-    autoComplete?: string;
-  }> = ({ id, label, type, value, onChange, error, placeholder, autoComplete }) => (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-secondary-400 mb-1">
-        {label}
-      </label>
-      <input
-        id={id}
-        name={id}
-        type={type}
-        required
-        value={value}
-        onChange={onChange}
-        className={`input-field ${error ? 'border-red-500' : ''}`}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        aria-label={label}
-      />
-      {error && (
-        <p className="mt-1 text-sm text-red-500" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -104,7 +138,7 @@ const Register: React.FC = () => {
           </h2>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           {generalError && (
             <div className="bg-red-500 text-white p-3 rounded-md text-sm" role="alert">
               {generalError}
@@ -113,33 +147,36 @@ const Register: React.FC = () => {
 
           <div className="rounded-md shadow-sm space-y-4">
             <InputField
-              id="username"
-              label="Username"
+              id="firstName"
+              name="firstName"
+              label="First Name"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              error={errors.username}
-              placeholder="Choose a username"
-              autoComplete="username"
+              value={formData.firstName}
+              onChange={handleInputChange}
+              error={errors.firstName}
+              placeholder="Enter your first name"
+              autoComplete="given-name"
             />
 
             <InputField
-              id="surname"
-              label="Surname"
+              id="lastName"
+              name="lastName"
+              label="Last Name"
               type="text"
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              error={errors.surname}
-              placeholder="Enter your surname"
+              value={formData.lastName}
+              onChange={handleInputChange}
+              error={errors.lastName}
+              placeholder="Enter your last name"
               autoComplete="family-name"
             />
 
             <InputField
               id="email"
+              name="email"
               label="Email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleInputChange}
               error={errors.email}
               placeholder="Enter your email"
               autoComplete="email"
@@ -147,10 +184,11 @@ const Register: React.FC = () => {
 
             <InputField
               id="password"
+              name="password"
               label="Password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange}
               error={errors.password}
               placeholder="Create a password"
               autoComplete="new-password"
@@ -158,10 +196,11 @@ const Register: React.FC = () => {
 
             <InputField
               id="confirmPassword"
+              name="confirmPassword"
               label="Confirm Password"
               type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
               error={errors.confirmPassword}
               placeholder="Confirm your password"
               autoComplete="new-password"

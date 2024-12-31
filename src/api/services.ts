@@ -33,11 +33,11 @@ export const auth = {
     }
   },
 
-  register: async (username: string, surname: string, email: string, password: string) => {
+  register: async (firstName: string, lastName: string, email: string, password: string) => {
     try {
       const response = await client.post<RegisterResponse>('/auth/register', { 
-        username, 
-        surname, 
+        firstName, 
+        lastName, 
         email, 
         password 
       });

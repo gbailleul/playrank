@@ -14,9 +14,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
   };
 
   const navigation = [
@@ -59,32 +59,28 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           {/* User section */}
           <div className="p-4 border-t border-secondary-700">
-            {user && (
-              <div className="flex items-center">
-                <img
-                  src={user.avatar_url || 'https://via.placeholder.com/40'}
-                  alt={user.username}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-white">{user.username}</p>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center text-sm text-secondary-400 hover:text-white transition-colors duration-200"
-                  >
-                    <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2" />
-                    Logout
-                  </button>
-                </div>
+            <div className="flex items-center">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">{user?.firstName} {user?.lastName}</p>
+                <p className="text-xs text-secondary-400">{user?.email}</p>
               </div>
-            )}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-secondary-400 hover:text-white rounded-lg hover:bg-secondary-700 transition-colors duration-200"
+                aria-label="Logout"
+              >
+                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main content */}
       <div className="pl-64">
-        <main className="p-8">{children}</main>
+        <main className="p-8">
+          {children}
+        </main>
       </div>
     </div>
   );

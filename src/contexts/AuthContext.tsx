@@ -5,8 +5,8 @@ import { auth } from '../api/services';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, surname: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -35,14 +35,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const { data } = await auth.login(username, password);
+  const login = async (email: string, password: string) => {
+    const { data } = await auth.login(email, password);
     localStorage.setItem('token', data.token);
     setUser(data.user);
   };
 
-  const register = async (username: string, surname: string, email: string, password: string) => {
-    const { data } = await auth.register(username, surname, email, password);
+  const register = async (firstName: string, lastName: string, email: string, password: string) => {
+    const { data } = await auth.register(firstName, lastName, email, password);
     localStorage.setItem('token', data.token);
     setUser(data.user);
   };

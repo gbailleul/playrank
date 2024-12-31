@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import InputField from '../components/ui/InputField';
 
 interface ValidationErrors {
   email?: string;
@@ -8,12 +9,29 @@ interface ValidationErrors {
 }
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [generalError, setGeneralError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof ValidationErrors]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +39,8 @@ const Login: React.FC = () => {
     setGeneralError('');
 
     try {
-      await login(email, password);
-      navigate('/');
+      await login(formData.email, formData.password);
+      navigate('/', { replace: true });
     } catch (err: any) {
       if (err.errors) {
         setErrors(err.errors);
@@ -33,40 +51,6 @@ const Login: React.FC = () => {
       }
     }
   };
-
-  const InputField: React.FC<{
-    id: string;
-    label: string;
-    type: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    error?: string;
-    placeholder: string;
-    autoComplete?: string;
-  }> = ({ id, label, type, value, onChange, error, placeholder, autoComplete }) => (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-secondary-400 mb-1">
-        {label}
-      </label>
-      <input
-        id={id}
-        name={id}
-        type={type}
-        required
-        value={value}
-        onChange={onChange}
-        className={`input-field ${error ? 'border-red-500' : ''}`}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        aria-label={label}
-      />
-      {error && (
-        <p className="mt-1 text-sm text-red-500" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -80,7 +64,7 @@ const Login: React.FC = () => {
           </h2>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           {generalError && (
             <div className="bg-red-500 text-white p-3 rounded-md text-sm" role="alert">
               {generalError}
@@ -90,10 +74,11 @@ const Login: React.FC = () => {
           <div className="rounded-md shadow-sm space-y-4">
             <InputField
               id="email"
+              name="email"
               label="Email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleInputChange}
               error={errors.email}
               placeholder="Enter your email"
               autoComplete="email"
@@ -101,10 +86,11 @@ const Login: React.FC = () => {
 
             <InputField
               id="password"
+              name="password"
               label="Password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange}
               error={errors.password}
               placeholder="Enter your password"
               autoComplete="current-password"

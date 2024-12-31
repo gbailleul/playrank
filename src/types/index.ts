@@ -2,16 +2,14 @@ export type GameType = 'DARTS' | 'BILLIARDS';
 
 export interface User {
   id: string;
-  username: string;
-  surname: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  avatarUrl: string | null;
-  role: 'admin' | 'player' | 'viewer';
-  status: 'active' | 'inactive' | 'banned';
+  avatarUrl?: string;
+  role: 'ADMIN' | 'PLAYER' | 'VIEWER';
+  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
   createdAt: string;
   updatedAt: string;
-  statistics?: UserStatistics;
-  recentActivity?: UserActivity[];
 }
 
 export interface UserStatistics {
@@ -49,8 +47,8 @@ export interface Game {
 
 export interface CreateGameDto {
   name: string;
-  type: GameType;
-  description: string;
+  gameType: 'DARTS' | 'BILLIARDS';
+  description?: string;
   maxScore: number;
   minPlayers: number;
   maxPlayers: number;

@@ -22,11 +22,11 @@ const MainLayout = () => {
 
   const getRoleColor = (role: User['role']) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return 'text-[var(--accent-purple)]';
-      case 'player':
+      case 'PLAYER':
         return 'text-[var(--accent-blue)]';
-      case 'viewer':
+      case 'VIEWER':
         return 'text-[var(--text-secondary)]';
       default:
         return '';
@@ -35,11 +35,11 @@ const MainLayout = () => {
 
   const getStatusIndicator = (status: User['status']) => {
     switch (status) {
-      case 'active':
+      case 'ACTIVE':
         return 'status-success';
-      case 'inactive':
+      case 'INACTIVE':
         return 'status-warning';
-      case 'banned':
+      case 'BANNED':
         return 'status-error';
       default:
         return '';
@@ -80,7 +80,7 @@ const MainLayout = () => {
                 >
                   Leaderboard
                 </Link>
-                {user?.role === 'admin' && (
+                {user?.role === 'ADMIN' && (
                   <Link
                     to="/test-connection"
                     className={`nav-link ${isActivePath('/test-connection') ? 'bg-[var(--secondary-dark)] text-[var(--text-primary)]' : ''}`}
@@ -121,11 +121,11 @@ const MainLayout = () => {
                     className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/5"
                   >
                     <div className="w-8 h-8 rounded-full bg-[var(--secondary-dark)] flex items-center justify-center">
-                      <span className="text-sm font-medium">{user.username.charAt(0).toUpperCase()}</span>
+                      <span className="text-sm font-medium">{user.firstName.charAt(0).toUpperCase()}</span>
                     </div>
                     <div className="hidden sm:block text-left">
                       <div className="text-sm font-medium flex items-center space-x-2">
-                        <span>{user.username}</span>
+                        <span>{user.firstName} {user.lastName}</span>
                         <span className={`text-xs ${getRoleColor(user.role)}`}>
                           {user.role}
                         </span>
@@ -149,7 +149,7 @@ const MainLayout = () => {
                         >
                           Your Profile
                         </Link>
-                        {user.role === 'admin' && (
+                        {user.role === 'ADMIN' && (
                           <Link
                             to="/admin"
                             className="block px-4 py-2 text-sm hover:bg-white/5"
@@ -203,7 +203,7 @@ const MainLayout = () => {
               >
                 Leaderboard
               </Link>
-              {user?.role === 'admin' && (
+              {user?.role === 'ADMIN' && (
                 <Link
                   to="/test-connection"
                   className={`block nav-link ${isActivePath('/test-connection') ? 'bg-[var(--secondary-dark)] text-[var(--text-primary)]' : ''}`}
