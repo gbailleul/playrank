@@ -55,11 +55,11 @@ const Profile = () => {
 
   const getRoleColor = (role: User['role']) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return 'text-[var(--accent-purple)]';
-      case 'player':
+      case 'PLAYER':
         return 'text-[var(--accent-blue)]';
-      case 'viewer':
+      case 'VIEWER':
         return 'text-[var(--text-secondary)]';
       default:
         return '';
@@ -68,11 +68,11 @@ const Profile = () => {
 
   const getStatusColor = (status: User['status']) => {
     switch (status) {
-      case 'active':
+      case 'ACTIVE':
         return 'text-[var(--success)]';
-      case 'inactive':
+      case 'INACTIVE':
         return 'text-[var(--warning)]';
-      case 'banned':
+      case 'BANNED':
         return 'text-[var(--error)]';
       default:
         return '';
@@ -121,23 +121,23 @@ const Profile = () => {
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
-                  alt={user.username}
+                  alt={`${user.firstName} ${user.lastName}`}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
                 <span className="text-4xl font-medium">
-                  {user.username.charAt(0).toUpperCase()}
+                  {user.firstName.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold mb-2">{user.username}</h1>
+              <h1 className="text-2xl font-bold mb-2">{user.firstName} {user.lastName}</h1>
               <div className="flex items-center space-x-4">
                 <span className={`text-sm font-medium ${getRoleColor(user.role)}`}>
-                  {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  {user.role}
                 </span>
                 <span className={`text-sm ${getStatusColor(user.status)}`}>
-                  {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                  {user.status}
                 </span>
               </div>
             </div>

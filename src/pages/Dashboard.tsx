@@ -47,7 +47,7 @@ const Dashboard = () => {
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-          Welcome{user ? `, ${user.username}` : ''}!
+          Welcome{user ? `, ${user.firstName}` : ''}!
         </h1>
         <p className="text-[var(--text-secondary)] mt-2">
           Track your game scores and compete with friends
@@ -81,7 +81,16 @@ const Dashboard = () => {
 
       {/* Recent Games */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Recent Games</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Recent Games</h2>
+          <Link
+            to="/games/new"
+            className="btn-primary"
+          >
+            Create Game
+          </Link>
+        </div>
+        
         {games.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {games.map((game) => (
@@ -102,8 +111,21 @@ const Dashboard = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center text-[var(--text-secondary)] p-8">
-            No games found. Start by creating a new game!
+          <div className="game-card p-8 text-center">
+            <div className="text-4xl mb-4">🎲</div>
+            <h3 className="text-xl font-semibold mb-2">No Games Yet</h3>
+            <p className="text-[var(--text-secondary)] mb-6">
+              Get started by creating your first game session!
+            </p>
+            <Link
+              to="/games/new"
+              className="btn-primary inline-flex items-center"
+            >
+              <span className="mr-2">Create Your First Game</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
           </div>
         )}
       </div>

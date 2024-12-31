@@ -8,6 +8,8 @@ export interface User {
   avatarUrl?: string;
   role: 'ADMIN' | 'PLAYER' | 'VIEWER';
   status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
+  statistics?: UserStatistics;
+  recentActivity?: UserActivity[];
   createdAt: string;
   updatedAt: string;
 }
@@ -38,16 +40,19 @@ export interface Game {
   id: string;
   name: string;
   description: string;
-  gameType: 'DARTS' | 'BILLIARDS';
+  gameType: GameType;
+  maxScore: number;
+  minPlayers: number;
   maxPlayers: number;
   creatorId: string;
+  sessions?: GameSession[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateGameDto {
   name: string;
-  gameType: 'DARTS' | 'BILLIARDS';
+  gameType: GameType;
   description?: string;
   maxScore: number;
   minPlayers: number;
@@ -57,8 +62,9 @@ export interface CreateGameDto {
 export interface GameSession {
   id: string;
   gameId: string;
-  status: 'active' | 'completed' | 'cancelled';
-  startedAt: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  players: PlayerGame[];
+  startedAt: string | null;
   endedAt: string | null;
   winnerId: string | null;
   createdAt: string;
@@ -69,7 +75,9 @@ export interface PlayerGame {
   id: string;
   gameSessionId: string;
   playerId: string;
+  player: User;
   currentScore: number;
+  scores: Score[];
   rank: number | null;
   joinedAt: string;
   updatedAt: string;
@@ -77,19 +85,20 @@ export interface PlayerGame {
 
 export interface Score {
   id: string;
-  playerGameId: string;
   value: number;
-  timestamp: string;
+  turnNumber: number;
+  notes?: string;
+  createdAt: string;
 }
 
 export interface LoginDto {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface RegisterDto {
-  username: string;
-  surname: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
 }
