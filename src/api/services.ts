@@ -11,13 +11,43 @@ interface RegisterResponse {
   token: string;
 }
 
+interface ValidationErrors {
+  [key: string]: string;
+}
+
+interface ErrorResponse {
+  errors?: ValidationErrors;
+  message?: string;
+}
+
 export const auth = {
-  login: async (username: string, password: string) => {
-    return client.post<LoginResponse>('/auth/login', { username, password });
+  login: async (email: string, password: string) => {
+    try {
+      const response = await client.post<LoginResponse>('/auth/login', { email, password });
+      return response;
+    } catch (error: any) {
+      if (error.response?.data) {
+        throw error.response.data;
+      }
+      throw error;
+    }
   },
 
   register: async (username: string, surname: string, email: string, password: string) => {
-    return client.post<RegisterResponse>('/auth/register', { username, surname, email, password });
+    try {
+      const response = await client.post<RegisterResponse>('/auth/register', { 
+        username, 
+        surname, 
+        email, 
+        password 
+      });
+      return response;
+    } catch (error: any) {
+      if (error.response?.data) {
+        throw error.response.data;
+      }
+      throw error;
+    }
   },
 
   getProfile: async () => {
