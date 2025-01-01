@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CreateGameDto, User } from '../types';
 import { gameService, auth } from '../api/services';
 import { useAuth } from '../contexts/AuthContext';
+import DartBoard from '../components/atoms/DartBoard';
 
 const CreateGame: React.FC = () => {
   const navigate = useNavigate();
@@ -16,22 +17,26 @@ const CreateGame: React.FC = () => {
     maxPlayers: 4,
   });
   const [error, setError] = useState<string | null>(null);
-  const [players, setPlayers] = useState<User[]>([]);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [allPlayers, setAllPlayers] = useState<User[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Calculer le nombre total de joueurs (incluant le créateur)
+  const totalPlayers = selectedPlayers.length + 1;
 
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
         const { data } = await auth.getAllPlayers();
-        // Filtrer pour exclure l'utilisateur actuel et les utilisateurs inactifs/bannis
+        // Filter out current user and inactive/banned users
         const availablePlayers = data.filter(
           player => 
             player.id !== currentUser?.id && 
             player.status === 'ACTIVE' &&
             player.role === 'PLAYER'
         );
-        setPlayers(availablePlayers);
+        setAllPlayers(availablePlayers);
       } catch (err) {
         console.error('Error fetching players:', err);
         setError('Failed to load available players');
@@ -43,24 +48,56 @@ const CreateGame: React.FC = () => {
     fetchPlayers();
   }, [currentUser?.id]);
 
+  const filteredPlayers = allPlayers.filter(player => 
+    !selectedPlayers.some(selected => selected.id === player.id) &&
+    (player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     player.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const handleAddPlayer = (player: User) => {
+    // Vérifier si l'ajout du joueur ne dépasse pas la limite (4 joueurs au total)
+    if (totalPlayers < 4) {
+      setSelectedPlayers(prev => [...prev, player]);
+      setSearchTerm('');
+    }
+  };
+
+  const handleRemovePlayer = (playerId: string) => {
+    setSelectedPlayers(prev => prev.filter(p => p.id !== playerId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (selectedPlayers.length < 1) {
+    // Vérifier le nombre minimum de joueurs (au moins 2 joueurs au total)
+    if (totalPlayers < 2) {
       setError('Veuillez sélectionner au moins un autre joueur');
       return;
     }
 
+    // Vérifier le nombre maximum de joueurs (4 joueurs maximum)
+    if (totalPlayers > 4) {
+      setError('Le nombre maximum de joueurs est de 4');
+      return;
+    }
+
     try {
-      // Créer la partie
-      const gameResponse = await gameService.createGame(formData);
+      // Create game with updated player count
+      const gameData = {
+        ...formData,
+        minPlayers: 2,
+        maxPlayers: 4,
+        currentPlayers: totalPlayers
+      };
       
-      // Créer la session avec les joueurs sélectionnés
-      const allPlayers = [currentUser!.id, ...selectedPlayers];
-      await gameService.createGameSession(gameResponse.data.id, allPlayers);
+      const gameResponse = await gameService.createGame(gameData);
       
-      // Rediriger vers la page de la partie
+      // Create session with selected players (including creator)
+      const playerIds = selectedPlayers.map(p => p.id);
+      await gameService.createGameSession(gameResponse.data.id, [currentUser!.id, ...playerIds]);
+      
+      // Redirect to game page
       navigate(`/games/${gameResponse.data.id}`);
     } catch (error: any) {
       console.error('Error creating game:', error);
@@ -71,110 +108,172 @@ const CreateGame: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-blue)]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--gold-primary)]"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-[var(--bg-primary)] min-h-screen">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Nouvelle partie de fléchettes</h1>
-        <p className="text-[var(--text-secondary)] mb-6">Sélectionnez vos adversaires pour commencer</p>
+        <h1 className="vintage-title text-3xl mb-2">Nouvelle partie de fléchettes</h1>
+        <p className="vintage-text text-[var(--text-secondary)] mb-6">Sélectionnez vos adversaires pour commencer</p>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-[var(--error)] text-[var(--error)] rounded-md">
-            {error}
+          <div className="vintage-frame mb-4 border-red-500/50 bg-[var(--bg-secondary)]/50">
+            <span className="text-red-400">{error}</span>
           </div>
         )}
 
-        <div className="game-card p-6">
+        <div className="vintage-frame">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-[var(--text-primary)]">
-                  Sélectionnez vos adversaires ({selectedPlayers.length}/3)
-                </h2>
-                <div className="flex items-center space-x-4">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="maxScore"
-                      value="301"
-                      checked={formData.maxScore === 301}
-                      onChange={(e) => setFormData(prev => ({ ...prev, maxScore: parseInt(e.target.value) }))}
-                      className="form-radio text-[var(--accent-blue)]"
-                    />
-                    <span className="text-[var(--text-primary)]">301</span>
-                  </label>
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="maxScore"
-                      value="501"
-                      checked={formData.maxScore === 501}
-                      onChange={(e) => setFormData(prev => ({ ...prev, maxScore: parseInt(e.target.value) }))}
-                      className="form-radio text-[var(--accent-blue)]"
-                    />
-                    <span className="text-[var(--text-primary)]">501</span>
-                  </label>
-                </div>
+              <h2 className="vintage-title text-lg">
+                Sélectionnez vos adversaires ({totalPlayers}/4)
+              </h2>
+
+              {/* Search input */}
+              <div className="relative z-50">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Rechercher un joueur..."
+                  className="vintage-input w-full"
+                  aria-label="Rechercher un joueur"
+                />
+                {searchTerm && filteredPlayers.length > 0 && (
+                  <div className="absolute z-50 w-full mt-2 bg-[var(--bg-secondary)]/95 backdrop-blur-sm 
+                    border border-[var(--gold-primary)] rounded-md shadow-[var(--shadow-strong)] max-h-60 overflow-auto
+                    animate-slideDown"
+                  >
+                    {filteredPlayers.map(player => (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => handleAddPlayer(player)}
+                        className="w-full p-3 text-left hover:bg-[var(--element-bg-hover)] flex items-center space-x-3 
+                          text-[var(--text-primary)] transition-all duration-[var(--animation-speed-normal)]
+                          hover:pl-4 group"
+                        disabled={selectedPlayers.length >= 3}
+                      >
+                        <div className="medal-frame w-8 h-8 flex items-center justify-center">
+                          {player.firstName[0]}
+                        </div>
+                        <span className="transition-colors duration-[var(--animation-speed-normal)] 
+                          group-hover:text-[var(--gold-primary)]"
+                        >
+                          {player.firstName} {player.lastName}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {players.map(player => (
-                  <label
+              {/* Selected players list */}
+              <div className="space-y-3 relative z-0">
+                {selectedPlayers.map((player, index) => (
+                  <div
                     key={player.id}
-                    className={`
-                      flex items-center p-4 rounded-md border cursor-pointer transition-all
-                      ${selectedPlayers.includes(player.id)
-                        ? 'border-[var(--accent-blue)] bg-[var(--accent-blue-light)] shadow-md'
-                        : 'border-[var(--border)] hover:border-[var(--accent-blue)] hover:shadow-sm'
-                      }
-                      ${selectedPlayers.length >= 3 && !selectedPlayers.includes(player.id)
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                      }
-                    `}
+                    className="leather-card flex items-center justify-between animate-slideIn"
+                    style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <input
-                      type="checkbox"
-                      className="hidden"
-                      checked={selectedPlayers.includes(player.id)}
-                      onChange={() => {
-                        if (selectedPlayers.includes(player.id)) {
-                          setSelectedPlayers(prev => prev.filter(id => id !== player.id));
-                        } else if (selectedPlayers.length < 3) {
-                          setSelectedPlayers(prev => [...prev, player.id]);
-                        }
-                      }}
-                      disabled={selectedPlayers.length >= 3 && !selectedPlayers.includes(player.id)}
-                    />
-                    <div className="flex items-center space-x-3 flex-1">
-                      <div className="w-10 h-10 rounded-full bg-[var(--accent-blue)] flex items-center justify-center text-white text-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="medal-frame w-8 h-8 flex items-center justify-center">
                         {player.firstName[0]}
                       </div>
-                      <div>
-                        <div className="font-medium text-[var(--text-primary)]">
-                          {player.firstName} {player.lastName}
-                        </div>
-                      </div>
-                      {selectedPlayers.includes(player.id) && (
-                        <div className="ml-auto">
-                          <svg className="w-6 h-6 text-[var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {player.firstName} {player.lastName}
+                      </span>
                     </div>
-                  </label>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePlayer(player.id)}
+                      className="text-[var(--text-tertiary)] hover:text-red-500 
+                        transition-colors duration-[var(--animation-speed-normal)]
+                        p-2 rounded-full hover:bg-[var(--bg-tertiary)]"
+                      aria-label={`Retirer ${player.firstName} ${player.lastName}`}
+                    >
+                      <svg className="w-5 h-5 transform transition-transform duration-[var(--animation-speed-normal)] 
+                        hover:scale-110" 
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
+              </div>
+
+              {/* Game Type Selector */}
+              <div className="vintage-frame">
+                <div className="relative z-10 flex flex-col space-y-6">
+                  {/* Game Types */}
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, gameType: 'DARTS' }))}
+                      className={`
+                        vintage-button flex items-center space-x-3
+                        ${formData.gameType === 'DARTS' && 'scale-105'}
+                      `}
+                    >
+                      <DartBoard size={32} className="flex-shrink-0" />
+                      <span className="text-xl">Darts</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className="vintage-button opacity-50 cursor-not-allowed"
+                    >
+                      <span className="text-xl">🎯 Around the Clock</span>
+                      <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2">
+                        <span className="bg-[var(--gold-primary)] text-[var(--bg-primary)] text-xs px-2 py-1 rounded-full">
+                          Bientôt
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Game Variants */}
+                  <div className="flex flex-col items-center space-y-4">
+                    <h3 className="vintage-title text-lg">Variante</h3>
+                    <div className="flex justify-center space-x-3 bg-[var(--bg-tertiary)] p-2 rounded-xl">
+                      {[301, 501, 701].map(score => (
+                        <label
+                          key={score}
+                          className={`
+                            vintage-button cursor-pointer
+                            ${formData.maxScore === score && 'scale-105'}
+                          `}
+                        >
+                          <input
+                            type="radio"
+                            name="maxScore"
+                            value={score}
+                            checked={formData.maxScore === score}
+                            onChange={(e) => setFormData(prev => ({ ...prev, maxScore: parseInt(e.target.value) }))}
+                            className="absolute opacity-0"
+                          />
+                          <div className="flex flex-col items-center space-y-1">
+                            <span className="text-3xl font-bold">{score}</span>
+                            <span className="text-sm opacity-90">points</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full btn-primary text-lg py-3"
+              className={`
+                vintage-button w-full text-lg
+                ${selectedPlayers.length < 1 && 'opacity-50 cursor-not-allowed'}
+              `}
               disabled={selectedPlayers.length < 1}
             >
               Commencer la partie

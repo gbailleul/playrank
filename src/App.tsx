@@ -1,94 +1,18 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import MainLayout from './components/layout/MainLayout';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import TestConnection from './components/TestConnection';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import CreateGame from './pages/CreateGame';
-import { useAuth } from './contexts/AuthContext';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import Router from './Router';
 
-// Protected Route wrapper
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--accent-blue)]"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Public Route wrapper (redirects to dashboard if already authenticated)
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--accent-blue)]"></div>
-      </div>
-    );
-  }
-
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-const App = () => {
+function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          }
-        />
-
-        {/* Protected routes with MainLayout */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="test-connection" element={<TestConnection />} />
-          <Route path="games/new" element={<CreateGame />} />
-          <Route path="games/:id" element={<div>Game Details</div>} />
-        </Route>
-
-        {/* Catch all route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <BrowserRouter>
+      <AuthProvider>
+        <ThemeProvider>
+          <Router />
+        </ThemeProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;

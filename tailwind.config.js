@@ -32,6 +32,20 @@ export default {
           900: '#0f172a',
         },
       },
+      keyframes: {
+        slideDown: {
+          '0%': { transform: 'translateY(-10px)', opacity: 0 },
+          '100%': { transform: 'translateY(0)', opacity: 1 },
+        },
+        slideIn: {
+          '0%': { transform: 'translateX(-20px)', opacity: 0 },
+          '100%': { transform: 'translateX(0)', opacity: 1 },
+        }
+      },
+      animation: {
+        slideDown: 'slideDown 0.2s ease-out',
+        slideIn: 'slideIn 0.3s ease-out forwards'
+      }
     },
   },
   plugins: [],

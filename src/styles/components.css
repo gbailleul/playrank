@@ -1,0 +1,83 @@
+/* Buttons */
+.btn-base {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-[var(--animation-speed-normal)];
+}
+
+.btn-primary {
+  @apply btn-base bg-[var(--accent-primary)] text-[var(--text-primary)]
+         hover:bg-[var(--accent-secondary)] shadow-[var(--shadow-glow)];
+}
+
+.btn-secondary {
+  @apply btn-base bg-[var(--element-bg)] text-[var(--text-secondary)]
+         hover:bg-[var(--element-bg-hover)] hover:text-[var(--text-primary)];
+}
+
+/* Navigation */
+.nav-link {
+  @apply px-3 py-2 rounded-lg transition-colors duration-[var(--animation-speed-normal)]
+         text-[var(--text-secondary)] hover:text-[var(--text-primary)]
+         hover:bg-[var(--element-bg-hover)];
+}
+
+.nav-link-active {
+  @apply bg-[var(--element-bg-active)] text-[var(--text-primary)];
+}
+
+/* Cards */
+.card {
+  @apply bg-[var(--bg-tertiary)] rounded-xl shadow-[var(--shadow-strong)]
+         border border-[var(--border-subtle)] p-6;
+}
+
+.card-hover {
+  @apply hover:border-[var(--border-accent)] hover:shadow-[var(--shadow-glow)]
+         transition-all duration-[var(--animation-speed-normal)];
+}
+
+/* Inputs */
+.input-base {
+  @apply w-full p-3 bg-[var(--bg-secondary)] text-[var(--text-primary)]
+         border border-[var(--border-subtle)] rounded-md
+         placeholder-[var(--text-tertiary)]
+         transition-all duration-[var(--animation-speed-normal)]
+         focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent;
+}
+
+/* Status indicators */
+.status-base {
+  @apply px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.status-success {
+  @apply status-base bg-green-500/10 text-green-500;
+}
+
+.status-warning {
+  @apply status-base bg-yellow-500/10 text-yellow-500;
+}
+
+.status-error {
+  @apply status-base bg-red-500/10 text-red-500;
+}
+
+/* Avatars */
+.avatar {
+  @apply w-8 h-8 rounded-full flex items-center justify-center
+         bg-[var(--element-bg)] text-[var(--text-primary)]
+         transition-transform duration-[var(--animation-speed-normal)]
+         hover:scale-110;
+}
+
+/* Dropdowns */
+.dropdown-menu {
+  @apply absolute right-0 mt-2 w-48 rounded-xl bg-[var(--bg-tertiary)]
+         border border-[var(--border-subtle)] shadow-[var(--shadow-strong)]
+         overflow-hidden z-50 animate-slideDown;
+}
+
+.dropdown-item {
+  @apply block w-full text-left px-4 py-2 text-sm
+         hover:bg-[var(--element-bg-hover)] transition-colors
+         duration-[var(--animation-speed-normal)];
+} 
