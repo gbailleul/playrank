@@ -5,6 +5,7 @@ import AvatarSelector from './AvatarSelector';
 import Dropdown, { DropdownItem } from '../atoms/Dropdown';
 import StatusBadge from '../atoms/StatusBadge';
 import type { User } from '../../types';
+import { FiLogOut } from 'react-icons/fi';
 
 interface UserMenuProps {
   className?: string;
@@ -97,23 +98,24 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
     >
       <div className="py-1">
         <div className="px-4 py-2 text-sm text-[var(--text-secondary)] border-b border-[var(--border-subtle)]">
-          <div>Signed in as</div>
+          <div>Connecté en tant que</div>
           <div className="font-medium text-[var(--text-primary)]">{user.email}</div>
         </div>
         <DropdownItem onClick={() => navigate('/profile')}>
-          Your Profile
+          Votre Profil
         </DropdownItem>
         {user.role === 'ADMIN' && (
           <DropdownItem onClick={() => navigate('/admin')}>
-            Admin Dashboard
+            Tableau de Bord Admin
           </DropdownItem>
         )}
-        <DropdownItem 
+        <button
           onClick={handleLogout}
-          className="text-red-500 hover:bg-red-500/10"
+          className="game-button-secondary w-full text-left px-4 py-2 flex items-center space-x-2"
         >
-          Sign out
-        </DropdownItem>
+          <FiLogOut className="w-5 h-5" />
+          <span>Déconnexion</span>
+        </button>
       </div>
     </Dropdown>
   );

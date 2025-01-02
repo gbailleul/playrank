@@ -26,7 +26,7 @@ const Input: React.FC<InputProps> = ({
       )}
       <input
         id={inputId}
-        className={`input-base ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
+        className={`game-input ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
         {...props}
       />
       {error && (

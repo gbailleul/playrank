@@ -148,18 +148,18 @@ const Profile = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Account Information */}
           <div className="game-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Account Information</h2>
+            <h2 className="text-lg font-semibold mb-4">Informations du compte</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-[var(--text-secondary)]">Email</label>
                 <p className="mt-1">{user.email}</p>
               </div>
               <div>
-                <label className="block text-sm text-[var(--text-secondary)]">Member Since</label>
+                <label className="block text-sm text-[var(--text-secondary)]">Membre depuis</label>
                 <p className="mt-1">{formatDate(user.createdAt)}</p>
               </div>
               <div>
-                <label className="block text-sm text-[var(--text-secondary)]">Last Updated</label>
+                <label className="block text-sm text-[var(--text-secondary)]">Dernière mise à jour</label>
                 <p className="mt-1">{formatDate(user.updatedAt)}</p>
               </div>
             </div>
@@ -167,22 +167,22 @@ const Profile = () => {
 
           {/* Game Statistics */}
           <div className="game-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Game Statistics</h2>
+            <h2 className="text-lg font-semibold mb-4">Statistiques de jeu</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="game-card bg-[var(--secondary-dark)] p-4">
-                <p className="text-sm text-[var(--text-secondary)]">Games Created</p>
+                <p className="text-sm text-[var(--text-secondary)]">Parties créées</p>
                 <p className="text-2xl font-bold mt-1">{user.statistics?.gamesCreated || 0}</p>
               </div>
               <div className="game-card bg-[var(--secondary-dark)] p-4">
-                <p className="text-sm text-[var(--text-secondary)]">Games Played</p>
+                <p className="text-sm text-[var(--text-secondary)]">Parties jouées</p>
                 <p className="text-2xl font-bold mt-1">{user.statistics?.gamesPlayed || 0}</p>
               </div>
               <div className="game-card bg-[var(--secondary-dark)] p-4">
-                <p className="text-sm text-[var(--text-secondary)]">Games Won</p>
+                <p className="text-sm text-[var(--text-secondary)]">Parties gagnées</p>
                 <p className="text-2xl font-bold mt-1">{user.statistics?.gamesWon || 0}</p>
               </div>
               <div className="game-card bg-[var(--secondary-dark)] p-4">
-                <p className="text-sm text-[var(--text-secondary)]">Win Rate</p>
+                <p className="text-sm text-[var(--text-secondary)]">Taux de victoire</p>
                 <p className="text-2xl font-bold mt-1">{user.statistics?.winRate || 0}%</p>
               </div>
             </div>
@@ -190,7 +190,7 @@ const Profile = () => {
 
           {/* Recent Activity */}
           <div className="game-card p-6 md:col-span-2">
-            <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+            <h2 className="text-lg font-semibold mb-4">Activité récente</h2>
             {user.recentActivity && user.recentActivity.length > 0 ? (
               <div className="space-y-4">
                 {user.recentActivity.map((activity: UserActivity, index: number) => (
@@ -199,17 +199,17 @@ const Profile = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">
                         {activity.type === 'game_created' ? (
-                          <>Created a new {activity.game.gameType.toLowerCase()} game: <span className="text-[var(--accent-blue)]">{activity.game.name}</span></>
+                          <>A créé une nouvelle partie de {activity.game.gameType.toLowerCase()}: <span className="text-[var(--accent-blue)]">{activity.game.name}</span></>
                         ) : (
                           <>
-                            Played {activity.game.gameType.toLowerCase()}: <span className="text-[var(--accent-blue)]">{activity.game.name}</span>
+                            A joué à {activity.game.gameType.toLowerCase()}: <span className="text-[var(--accent-blue)]">{activity.game.name}</span>
                             {activity.result && (
                               <span className="ml-2">
                                 {activity.result.won ? (
-                                  <span className="text-[var(--success)]">Won</span>
+                                  <span className="text-[var(--success)]">Victoire</span>
                                 ) : (
                                   <span className="text-[var(--text-secondary)]">
-                                    {activity.result.rank ? `Ranked #${activity.result.rank}` : 'Participated'}
+                                    {activity.result.rank ? `Classé #${activity.result.rank}` : 'A participé'}
                                   </span>
                                 )}
                               </span>
@@ -226,7 +226,7 @@ const Profile = () => {
               </div>
             ) : (
               <div className="text-center text-[var(--text-secondary)] py-8">
-                <p>No recent activity to display</p>
+                <p>Aucune activité récente à afficher</p>
               </div>
             )}
           </div>

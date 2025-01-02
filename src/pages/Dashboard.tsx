@@ -11,10 +11,10 @@ const Dashboard: React.FC = () => {
         {/* Header Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">
-            Welcome, {user?.firstName}!
+            Bienvenue, {user?.firstName}!
           </h1>
           <p className="text-[var(--text-secondary)]">
-            Track your game scores and compete with friends
+            Suivez vos scores et affrontez vos amis
           </p>
         </div>
 
@@ -32,8 +32,8 @@ const Dashboard: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-semibold mb-2 text-[var(--text-primary)]">Start New Game</h2>
-                <p className="text-[var(--text-secondary)]">Create a new game session and invite players</p>
+                <h2 className="text-xl font-semibold mb-2 text-[var(--text-primary)]">Nouvelle partie</h2>
+                <p className="text-[var(--text-secondary)]">Créer une nouvelle partie et inviter des joueurs</p>
               </div>
               <div className="bg-[var(--accent-primary)]/10 p-2 rounded-lg">
                 <svg className="w-8 h-8 text-[var(--accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,8 +56,8 @@ const Dashboard: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-semibold mb-2 text-[var(--text-primary)]">Check Rankings</h2>
-                <p className="text-[var(--text-secondary)]">View the rankings and compete for the top spot</p>
+                <h2 className="text-xl font-semibold mb-2 text-[var(--text-primary)]">Voir le classement</h2>
+                <p className="text-[var(--text-secondary)]">Consultez les classements et visez la première place</p>
               </div>
               <div className="bg-[var(--accent-primary)]/10 p-2 rounded-lg">
                 <svg className="w-8 h-8 text-[var(--accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,12 +71,12 @@ const Dashboard: React.FC = () => {
         {/* Recent Games Section */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Recent Games</h2>
+            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Parties récentes</h2>
             <Link 
               to="/games/new" 
               className="btn-primary"
             >
-              Create Game
+              Créer une partie
             </Link>
           </div>
 
@@ -86,13 +86,13 @@ const Dashboard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </div>
-            <p className="text-lg mb-2">No Recent Games</p>
-            <p className="text-sm mb-4">Get started by creating your first game!</p>
+            <p className="text-lg mb-2">Aucune partie récente</p>
+            <p className="text-sm mb-4">Commencez par créer votre première partie !</p>
             <Link
               to="/games/new"
               className="btn-primary"
             >
-              Create Game
+              Créer une partie
             </Link>
           </div>
         </div>

@@ -110,7 +110,7 @@ const GameSession: React.FC = () => {
   if (!session) {
     return (
       <div className="text-center text-red-500">
-        Game session not found
+        Session de jeu introuvable
       </div>
     );
   }
@@ -132,7 +132,7 @@ const GameSession: React.FC = () => {
             className="btn-secondary flex items-center"
           >
             <XCircleIcon className="w-5 h-5 mr-2" />
-            End Game
+            Terminer la partie
           </button>
         )}
       </div>
@@ -146,7 +146,7 @@ const GameSession: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Scoreboard */}
         <div className="card">
-          <h2 className="text-xl font-semibold text-white mb-4">Scoreboard</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Tableau des scores</h2>
           <div className="space-y-4">
             {session.players.map((playerSession) => (
               <div
@@ -201,7 +201,7 @@ const GameSession: React.FC = () => {
 
         {/* Recent Moves */}
         <div className="card">
-          <h2 className="text-xl font-semibold text-white mb-4">Recent Moves</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Derniers coups</h2>
           <div className="space-y-3">
             {session.players
               .flatMap((p) => (p as any).scores || [])
@@ -223,7 +223,7 @@ const GameSession: React.FC = () => {
                         {score.player_session.player.username}
                       </p>
                       <p className="text-xs text-secondary-400">
-                        Turn {score.turn_number}
+                        Tour {score.turn_number}
                       </p>
                     </div>
                   </div>

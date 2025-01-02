@@ -45,55 +45,55 @@ const Register: React.FC = () => {
 
     // First Name validation
     if (!formData.firstName) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = 'Le prénom est requis';
       isValid = false;
     } else if (formData.firstName.length < 2) {
-      newErrors.firstName = 'First name must be at least 2 characters long';
+      newErrors.firstName = 'Le prénom doit contenir au moins 2 caractères';
       isValid = false;
     } else if (!/^[a-zA-Z\s-]+$/.test(formData.firstName)) {
-      newErrors.firstName = 'First name can only contain letters, spaces, and hyphens';
+      newErrors.firstName = 'Le prénom ne peut contenir que des lettres, espaces et tirets';
       isValid = false;
     }
 
     // Last Name validation
     if (!formData.lastName) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = 'Le nom est requis';
       isValid = false;
     } else if (formData.lastName.length < 2) {
-      newErrors.lastName = 'Last name must be at least 2 characters long';
+      newErrors.lastName = 'Le nom doit contenir au moins 2 caractères';
       isValid = false;
     } else if (!/^[a-zA-Z\s-]+$/.test(formData.lastName)) {
-      newErrors.lastName = 'Last name can only contain letters, spaces, and hyphens';
+      newErrors.lastName = 'Le nom ne peut contenir que des lettres, espaces et tirets';
       isValid = false;
     }
 
     // Email validation
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'L\'email est requis';
       isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Veuillez entrer une adresse email valide';
       isValid = false;
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Le mot de passe est requis';
       isValid = false;
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+      newErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
       isValid = false;
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+      newErrors.password = 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre';
       isValid = false;
     }
 
     // Confirm password validation
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = 'Veuillez confirmer votre mot de passe';
       isValid = false;
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
       isValid = false;
     }
 
@@ -127,20 +127,16 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+      <div className="max-w-md w-full space-y-8 p-8 game-card">
         <div>
-          <h1 className="text-center text-3xl font-extrabold text-primary-500">
-            PlayRank
-          </h1>
-          <h2 className="mt-6 text-center text-3xl font-bold text-white">
-            Create your account
+          <h2 className="mt-6 text-center text-3xl game-title">
+            Créer un compte
           </h2>
         </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {generalError && (
-            <div className="bg-red-500 text-white p-3 rounded-md text-sm" role="alert">
+            <div className="bg-red-500/10 text-red-500 p-3 rounded-lg text-sm backdrop-blur-sm border border-red-500/20">
               {generalError}
             </div>
           )}
@@ -149,24 +145,24 @@ const Register: React.FC = () => {
             <InputField
               id="firstName"
               name="firstName"
-              label="First Name"
+              label="Prénom"
               type="text"
               value={formData.firstName}
               onChange={handleInputChange}
               error={errors.firstName}
-              placeholder="Enter your first name"
+              placeholder="Entrez votre prénom"
               autoComplete="given-name"
             />
 
             <InputField
               id="lastName"
               name="lastName"
-              label="Last Name"
+              label="Nom"
               type="text"
               value={formData.lastName}
               onChange={handleInputChange}
               error={errors.lastName}
-              placeholder="Enter your last name"
+              placeholder="Entrez votre nom"
               autoComplete="family-name"
             />
 
@@ -178,49 +174,53 @@ const Register: React.FC = () => {
               value={formData.email}
               onChange={handleInputChange}
               error={errors.email}
-              placeholder="Enter your email"
+              placeholder="Entrez votre email"
               autoComplete="email"
             />
 
             <InputField
               id="password"
               name="password"
-              label="Password"
+              label="Mot de passe"
               type="password"
               value={formData.password}
               onChange={handleInputChange}
               error={errors.password}
-              placeholder="Create a password"
+              placeholder="Créez un mot de passe"
               autoComplete="new-password"
             />
 
             <InputField
               id="confirmPassword"
               name="confirmPassword"
-              label="Confirm Password"
+              label="Confirmer le mot de passe"
               type="password"
               value={formData.confirmPassword}
               onChange={handleInputChange}
               error={errors.confirmPassword}
-              placeholder="Confirm your password"
+              placeholder="Confirmez votre mot de passe"
               autoComplete="new-password"
             />
           </div>
 
           <div>
-            <button type="submit" className="btn-primary w-full">
-              Sign up
+            <button
+              type="submit"
+              className="game-button w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Création du compte..." : "S'inscrire"}
             </button>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-secondary-400">
-              Already have an account?{' '}
+            <p className="text-sm text-[var(--text-secondary)]">
+              Vous avez déjà un compte ?{' '}
               <Link
                 to="/login"
-                className="font-medium text-primary-500 hover:text-primary-400"
+                className="font-medium text-[var(--gold)] hover:text-[var(--gold-dark)]"
               >
-                Sign in
+                Se connecter
               </Link>
             </p>
           </div>

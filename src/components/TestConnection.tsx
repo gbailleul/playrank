@@ -82,15 +82,15 @@ const TestConnection = () => {
     <div className="container-sm py-8">
       <div className="game-card p-6 space-y-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold">API Connection Test</h2>
+          <h2 className="text-2xl font-bold">Test de connexion API</h2>
           <p className="text-[var(--text-secondary)]">
-            Test the connection to the backend API and verify endpoint functionality.
+            Testez la connexion à l'API backend et vérifiez le fonctionnement des points de terminaison.
           </p>
         </div>
 
         {/* Backend Status */}
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">Backend Status</h3>
+          <h3 className="text-lg font-semibold">État du backend</h3>
           <div className="flex items-center space-x-4">
             <div
               className={`status-indicator ${
@@ -101,28 +101,28 @@ const TestConnection = () => {
             </div>
             {lastChecked && (
               <span className="text-sm text-[var(--text-secondary)]">
-                Last checked: {lastChecked.toLocaleTimeString()}
+                Dernière vérification : {lastChecked.toLocaleTimeString()}
               </span>
             )}
             <button
               onClick={checkBackendStatus}
               className="btn-secondary text-sm"
             >
-              Check Now
+              Vérifier maintenant
             </button>
           </div>
         </div>
 
         {/* Connection Info */}
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">Connection Information</h3>
+          <h3 className="text-lg font-semibold">Informations de connexion</h3>
           <div className="game-card p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[var(--text-secondary)]">Frontend URL:</span>
+              <span className="text-[var(--text-secondary)]">URL Frontend :</span>
               <span>http://localhost:5173</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[var(--text-secondary)]">Backend URL:</span>
+              <span className="text-[var(--text-secondary)]">URL Backend :</span>
               <span>http://localhost:8000</span>
             </div>
           </div>
@@ -130,21 +130,21 @@ const TestConnection = () => {
 
         {/* Test Actions */}
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">Test Actions</h3>
+          <h3 className="text-lg font-semibold">Actions de test</h3>
           <div className="flex flex-wrap gap-4">
             <button
               onClick={handleTestCreateGame}
               className="btn-primary"
               disabled={backendStatus !== 'Connected'}
             >
-              Test Create Game
+              Test création partie
             </button>
             <button
               onClick={handleTestGetGames}
               className="btn-primary"
               disabled={backendStatus !== 'Connected'}
             >
-              Test Get Games
+              Test obtention parties
             </button>
           </div>
         </div>

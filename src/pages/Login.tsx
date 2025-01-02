@@ -20,7 +20,7 @@ const Login: React.FC = () => {
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to login');
+      setError(err.message || 'Échec de la connexion');
     } finally {
       setIsLoading(false);
     }
@@ -28,22 +28,22 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-      <div className="max-w-md w-full space-y-8 p-8 bg-[var(--bg-secondary)] rounded-xl shadow-lg">
+      <div className="max-w-md w-full space-y-8 p-8 game-card">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-[var(--text-primary)]">
-            Sign in to your account
+          <h2 className="mt-6 text-center text-3xl game-title">
+            Connexion à votre compte
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-500/10 text-red-500 p-3 rounded-lg text-sm">
+            <div className="bg-red-500/10 text-red-500 p-3 rounded-lg text-sm backdrop-blur-sm border border-red-500/20">
               {error}
             </div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
-                Email address
+                Adresse email
               </label>
               <input
                 id="email"
@@ -53,13 +53,13 @@ const Login: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-[var(--border-subtle)] placeholder-[var(--text-tertiary)] text-[var(--text-primary)] rounded-t-md focus:outline-none focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:z-10 sm:text-sm bg-[var(--bg-primary)]"
-                placeholder="Email address"
+                className="game-input w-full rounded-t-md rounded-b-none"
+                placeholder="Adresse email"
               />
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
-                Password
+                Mot de passe
               </label>
               <input
                 id="password"
@@ -69,8 +69,8 @@ const Login: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-[var(--border-subtle)] placeholder-[var(--text-tertiary)] text-[var(--text-primary)] rounded-b-md focus:outline-none focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:z-10 sm:text-sm bg-[var(--bg-primary)]"
-                placeholder="Password"
+                className="game-input w-full rounded-b-md rounded-t-none"
+                placeholder="Mot de passe"
               />
             </div>
           </div>
@@ -78,10 +78,10 @@ const Login: React.FC = () => {
           <div>
             <button
               type="submit"
+              className="game-button w-full"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? 'Connexion...' : 'Se connecter'}
             </button>
           </div>
         </form>

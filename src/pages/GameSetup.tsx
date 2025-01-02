@@ -111,7 +111,7 @@ const GameSetup: React.FC = () => {
   if (!session) {
     return (
       <div className="text-center text-red-500">
-        Game session not found
+        Session de jeu introuvable
       </div>
     );
   }
@@ -119,7 +119,7 @@ const GameSetup: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Game Setup</h1>
+        <h1 className="text-3xl font-bold text-white">Configuration de la partie</h1>
       </div>
 
       <div className="card space-y-6">
@@ -212,14 +212,14 @@ const GameSetup: React.FC = () => {
             onClick={() => navigate(-1)}
             className="btn-secondary"
           >
-            Cancel
+            Annuler
           </button>
           <button
             onClick={handleStartGame}
             className="btn-primary"
             disabled={selectedPlayers.length < session.game.min_players}
           >
-            Start Game
+            Commencer la partie
           </button>
         </div>
       </div>

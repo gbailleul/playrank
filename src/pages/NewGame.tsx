@@ -46,7 +46,7 @@ const NewGame: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Create New Game</h1>
+        <h1 className="game-title text-3xl">Create New Game</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -56,19 +56,19 @@ const NewGame: React.FC = () => {
           </div>
         )}
 
-        <div className="card space-y-4">
+        <div className="game-card space-y-4">
           <div>
-            <label className="block text-sm font-medium text-secondary-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Game Type
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => setGameType('DARTS')}
-                className={`p-4 rounded-lg border-2 transition-colors duration-200 ${
+                className={`game-button ${
                   gameType === 'DARTS'
-                    ? 'border-primary-500 bg-primary-500/20 text-white'
-                    : 'border-secondary-700 hover:border-primary-500/50 text-secondary-400'
+                    ? ''
+                    : 'opacity-50'
                 }`}
               >
                 <div className="text-lg font-semibold">Darts</div>
@@ -77,10 +77,10 @@ const NewGame: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setGameType('BILLIARDS')}
-                className={`p-4 rounded-lg border-2 transition-colors duration-200 ${
+                className={`game-button ${
                   gameType === 'BILLIARDS'
-                    ? 'border-primary-500 bg-primary-500/20 text-white'
-                    : 'border-secondary-700 hover:border-primary-500/50 text-secondary-400'
+                    ? ''
+                    : 'opacity-50'
                 }`}
               >
                 <div className="text-lg font-semibold">Billiards</div>
@@ -133,13 +133,13 @@ const NewGame: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="btn-secondary"
+            className="game-button-secondary"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="btn-primary"
+            className="game-button"
             disabled={loading}
           >
             {loading ? (

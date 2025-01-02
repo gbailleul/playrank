@@ -13,7 +13,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseClass = variant === 'primary' ? 'btn-primary' : 'btn-secondary';
+  const baseClass = variant === 'primary' ? 'game-button' : 'game-button-secondary';
   
   return (
     <button

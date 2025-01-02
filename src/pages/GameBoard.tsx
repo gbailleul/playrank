@@ -141,12 +141,12 @@ const GameBoard: React.FC = () => {
                   value={currentScore}
                   onChange={(e) => setCurrentScore(parseInt(e.target.value) || 0)}
                   placeholder="Entrez le score"
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="game-input w-full"
                 />
               </div>
               <button
                 onClick={handleScoreSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="game-button"
               >
                 Valider le score
               </button>

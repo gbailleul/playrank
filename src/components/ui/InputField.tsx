@@ -24,7 +24,7 @@ const InputField: React.FC<InputFieldProps> = ({
   autoComplete
 }) => (
   <div>
-    <label htmlFor={id} className="block text-sm font-medium text-secondary-400 mb-1">
+    <label htmlFor={id} className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
       {label}
     </label>
     <input
@@ -34,7 +34,7 @@ const InputField: React.FC<InputFieldProps> = ({
       required
       value={value}
       onChange={onChange}
-      className={`input-field ${error ? 'border-red-500' : ''}`}
+      className={`game-input w-full ${error ? 'border-red-500' : ''}`}
       placeholder={placeholder}
       autoComplete={autoComplete}
       aria-label={label}
