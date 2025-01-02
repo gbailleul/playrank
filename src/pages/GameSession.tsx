@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { gameSessionService, createWebSocket } from '../api/services';
-import type { GameSession, PlayerGameSession, Score } from '../types';
+import { gameSessionService } from '../api/services';
+import type { GameSession } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  TrophyIcon,
-  ArrowPathIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline';
+
+interface WebSocketMessage {
+  type: 'score_update' | 'game_status_update';
+  data?: any;
+}
 
 const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,11 +25,13 @@ const GameSession: React.FC = () => {
 
   // Fetch game session data
   const fetchSession = useCallback(async () => {
+    if (!id) return;
+    
     try {
-      const { data } = await gameSessionService.getSession(Number(id));
+      const { data } = await gameSessionService.getSession(id);
       setSession(data);
-      if (data.game.game_type === 'DARTS') {
-        setCurrentScore(data.game.max_score);
+      if (data.game.gameType === 'DARTS') {
+        setCurrentScore(data.game.maxScore);
       }
     } catch (err) {
       setError('Failed to load game session');
@@ -37,43 +42,45 @@ const GameSession: React.FC = () => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    if (id) {
-      const websocket = createWebSocket(Number(id));
-      setWs(websocket);
+    if (!id) return;
 
-      websocket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'score_update') {
-          fetchSession();
-        } else if (data.type === 'game_status_update') {
-          fetchSession();
-        }
-      };
+    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+    const websocket = new WebSocket(`${WS_URL}/games/${id}`);
 
-      return () => {
-        websocket.close();
-      };
-    }
+    websocket.onmessage = (event) => {
+      const message = JSON.parse(event.data) as WebSocketMessage;
+      if (message.type === 'score_update' || message.type === 'game_status_update') {
+        fetchSession();
+      }
+    };
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
   }, [id, fetchSession]);
 
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
 
-  const handleScoreSubmit = async (playerSession: PlayerGameSession, points: number) => {
+  const handleScoreSubmit = async (points: number) => {
+    if (!session || !user) return;
+
     try {
-      await gameSessionService.addScore(session!.id, {
-        player_id: playerSession.player.id,
+      await gameSessionService.addScore(session.id, {
+        player_id: user.id,
         points,
-        notes: `Turn ${currentTurn}`,
+        turn_number: currentTurn
       });
 
       // Send WebSocket update
       ws?.send(JSON.stringify({
         type: 'score_update',
-        player_id: playerSession.player.id,
-        score: points,
-        turn_number: currentTurn,
+        game_id: session.id,
+        player_id: user.id,
+        score: points
       }));
 
       setCurrentTurn(prev => prev + 1);
@@ -83,14 +90,17 @@ const GameSession: React.FC = () => {
     }
   };
 
-  const handleEndGame = async (winnerId: number) => {
+  const handleEndGame = async (winnerId: string) => {
+    if (!session) return;
+
     try {
-      await gameSessionService.endSession(session!.id, winnerId);
+      await gameSessionService.endSession(session.id, winnerId);
       
       // Send WebSocket update
       ws?.send(JSON.stringify({
         type: 'game_status_update',
-        status: 'COMPLETED',
+        game_id: session.id,
+        status: 'COMPLETED'
       }));
 
       navigate('/');
@@ -101,137 +111,139 @@ const GameSession: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--neon-primary)] border-t-transparent"></div>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="text-center text-red-500">
-        Session de jeu introuvable
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+        <div className="game-card p-8 text-center">
+          <div className="text-[var(--neon-accent)]">Session de jeu introuvable</div>
+        </div>
       </div>
     );
   }
 
-  const isDarts = session.game.game_type === 'DARTS';
+  const isDarts = session.game.gameType === 'DARTS';
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white">{session.game.name}</h1>
-          <p className="text-secondary-400">
-            {session.game.game_type} - {session.status}
-          </p>
-        </div>
-        {session.status === 'IN_PROGRESS' && (
-          <button
-            onClick={() => handleEndGame(session.players[0].player.id)}
-            className="btn-secondary flex items-center"
-          >
-            <XCircleIcon className="w-5 h-5 mr-2" />
-            Terminer la partie
-          </button>
-        )}
-      </div>
-
-      {error && (
-        <div className="bg-red-500 text-white p-3 rounded-md text-sm mb-6">
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Scoreboard */}
-        <div className="card">
-          <h2 className="text-xl font-semibold text-white mb-4">Tableau des scores</h2>
-          <div className="space-y-4">
-            {session.players.map((playerSession) => (
-              <div
-                key={playerSession.id}
-                className="bg-secondary-700 rounded-lg p-4"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <img
-                      src={playerSession.player.avatar_url || 'https://via.placeholder.com/40'}
-                      alt={playerSession.player.username}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <span className="ml-3 font-medium text-white">
-                      {playerSession.player.username}
-                    </span>
-                  </div>
-                  <div className="text-2xl font-bold text-primary-500">
-                    {isDarts
-                      ? session.game.max_score - playerSession.current_score
-                      : playerSession.current_score}
-                  </div>
-                </div>
-
-                {session.status === 'IN_PROGRESS' &&
-                  user?.id === playerSession.player.id && (
-                    <div className="mt-4">
-                      <div className="flex space-x-2">
-                        <input
-                          type="number"
-                          value={currentScore}
-                          onChange={(e) =>
-                            setCurrentScore(Math.max(0, parseInt(e.target.value) || 0))
-                          }
-                          className="input-field w-24"
-                          min="0"
-                          max={isDarts ? session.game.max_score : undefined}
-                        />
-                        <button
-                          onClick={() => handleScoreSubmit(playerSession, currentScore)}
-                          className="btn-primary"
-                        >
-                          Submit Score
-                        </button>
-                      </div>
-                    </div>
-                  )}
-              </div>
-            ))}
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="game-card">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="game-title text-2xl">{session.game.name}</h1>
+            <p className="text-[var(--text-secondary)]">
+              {session.game.gameType} - {session.status}
+            </p>
           </div>
+          {session.status === 'IN_PROGRESS' && (
+            <button
+              onClick={() => session.players[0] && handleEndGame(session.players[0].player.id)}
+              className="game-button-secondary flex items-center"
+            >
+              <XCircleIcon className="w-5 h-5 mr-2" />
+              Terminer la partie
+            </button>
+          )}
         </div>
 
-        {/* Recent Moves */}
-        <div className="card">
-          <h2 className="text-xl font-semibold text-white mb-4">Derniers coups</h2>
-          <div className="space-y-3">
-            {session.players
-              .flatMap((p) => (p as any).scores || [])
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-              .slice(0, 10)
-              .map((score: Score) => (
+        {error && (
+          <div className="bg-red-500 text-white p-3 rounded-md text-sm mb-6">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Scoreboard */}
+          <div className="game-card">
+            <h2 className="game-title text-xl mb-4">Tableau des scores</h2>
+            <div className="space-y-4">
+              {session.players.map((playerSession) => (
                 <div
-                  key={score.id}
-                  className="flex items-center justify-between bg-secondary-700 p-3 rounded-lg"
+                  key={playerSession.id}
+                  className={`game-card ${playerSession.player.id === user?.id ? 'border-[var(--neon-primary)]' : ''}`}
                 >
-                  <div className="flex items-center">
-                    <img
-                      src={score.player_session.player.avatar_url || 'https://via.placeholder.com/32'}
-                      alt={score.player_session.player.username}
-                      className="w-8 h-8 rounded-full"
-                    />
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-white">
-                        {score.player_session.player.username}
-                      </p>
-                      <p className="text-xs text-secondary-400">
-                        Tour {score.turn_number}
-                      </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full border border-[var(--neon-primary)] flex items-center justify-center bg-[var(--glass-bg)]">
+                        {playerSession.player.username[0]}
+                      </div>
+                      <span className="ml-3 font-medium">
+                        {playerSession.player.username}
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-[var(--neon-primary)]">
+                      {isDarts
+                        ? session.game.maxScore - playerSession.currentScore
+                        : playerSession.currentScore}
                     </div>
                   </div>
-                  <div className="text-lg font-semibold text-primary-500">
-                    {isDarts ? '-' : '+'}{score.points}
-                  </div>
+
+                  {session.status === 'IN_PROGRESS' &&
+                    user?.id === playerSession.player.id && (
+                      <div className="mt-4">
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={currentScore}
+                            onChange={(e) =>
+                              setCurrentScore(Math.max(0, parseInt(e.target.value) || 0))
+                            }
+                            className="game-input w-24"
+                            min="0"
+                            max={isDarts ? session.game.maxScore : undefined}
+                          />
+                          <button
+                            onClick={() => handleScoreSubmit(currentScore)}
+                            className="game-button"
+                          >
+                            Submit Score
+                          </button>
+                        </div>
+                      </div>
+                    )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Recent Moves */}
+          <div className="game-card">
+            <h2 className="game-title text-xl mb-4">Derniers coups</h2>
+            <div className="space-y-3">
+              {session.players
+                .flatMap(p => p.scores || [])
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 10)
+                .map((score) => (
+                  <div
+                    key={score.id}
+                    className="game-card"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full border border-[var(--neon-primary)] flex items-center justify-center bg-[var(--glass-bg)]">
+                          {score.playerGame.player.username[0]}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium">
+                            {score.playerGame.player.username}
+                          </p>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Tour {score.turnNumber}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-lg font-semibold text-[var(--neon-primary)]">
+                        {isDarts ? '-' : '+'}{score.value}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
         </div>
       </div>

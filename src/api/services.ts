@@ -1,5 +1,5 @@
 import client from './client';
-import type { User, CreateGameDto, Game } from '../types';
+import type { User, CreateGameDto, Game, GameSession, AddScorePayload, Score } from '../types';
 
 interface LoginResponse {
   user: User;
@@ -121,4 +121,39 @@ export const gameService = {
   createGameSession: async (gameId: string, players: string[]) => {
     return client.post<Game>(`/games/${gameId}/sessions`, { players });
   },
+};
+
+/**
+ * Service de gestion des sessions de jeu.
+ * Gère les opérations liées aux sessions de jeu en cours.
+ */
+export const gameSessionService = {
+  /**
+   * Récupère une session de jeu.
+   * @param sessionId - ID de la session
+   */
+  getSession: async (sessionId: string) => {
+    return client.get<GameSession>(`/games/sessions/${sessionId}`);
+  },
+
+  /**
+   * Ajoute un score à une session.
+   * @param sessionId - ID de la session
+   * @param payload - Données du score
+   */
+  addScore: async (sessionId: string, payload: AddScorePayload) => {
+    return client.post<Score>(`/games/sessions/${sessionId}/scores`, payload);
+  },
+
+  /**
+   * Termine une session de jeu.
+   * @param sessionId - ID de la session
+   * @param winnerId - ID du gagnant
+   */
+  endSession: async (sessionId: string, winnerId: string) => {
+    return client.patch(`/games/sessions/${sessionId}`, {
+      status: 'COMPLETED',
+      winnerId
+    });
+  }
 }; 

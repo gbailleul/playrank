@@ -4,6 +4,7 @@ export interface User {
   id: string;
   firstName: string;
   lastName: string;
+  username: string;
   email: string;
   avatarUrl?: string;
   role: 'ADMIN' | 'PLAYER' | 'VIEWER';
@@ -62,6 +63,7 @@ export interface CreateGameDto {
 export interface GameSession {
   id: string;
   gameId: string;
+  game: Game;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   players: PlayerGame[];
   startedAt: string | null;
@@ -89,6 +91,7 @@ export interface Score {
   turnNumber: number;
   notes?: string;
   createdAt: string;
+  playerGame: PlayerGame;
 }
 
 export interface LoginDto {
