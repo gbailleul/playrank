@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import Avatar from '../atoms/Avatar';
+import AvatarSelector from './AvatarSelector';
 import Dropdown, { DropdownItem } from '../atoms/Dropdown';
 import StatusBadge from '../atoms/StatusBadge';
 import type { User } from '../../types';
@@ -11,7 +11,7 @@ interface UserMenuProps {
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserAvatar } = useAuth();
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -19,6 +19,14 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleAvatarChange = async (avatarUrl: string) => {
+    try {
+      await updateUserAvatar(avatarUrl);
+    } catch (error) {
+      console.error('Failed to update avatar:', error);
+    }
   };
 
   const getRoleColor = (role: User['role']) => {
@@ -47,12 +55,30 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
     }
   };
 
+  const getFrameType = (role: User['role']) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'legendary';
+      case 'PLAYER':
+        return 'epic';
+      case 'VIEWER':
+        return 'common';
+      default:
+        return 'common';
+    }
+  };
+
   const trigger = (
-    <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-[var(--element-bg-hover)]">
-      <Avatar name={`${user.firstName} ${user.lastName}`} />
+    <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-[var(--element-bg-hover)]">
+      <AvatarSelector
+        currentAvatar={user.avatarUrl}
+        userName={`${user.firstName} ${user.lastName}`}
+        onAvatarChange={handleAvatarChange}
+        frameType={getFrameType(user.role)}
+      />
       <div className="hidden sm:block text-left">
         <div className="text-sm font-medium flex items-center space-x-2">
-          <span>{user.firstName} {user.lastName}</span>
+          <span className="text-[var(--text-primary)]">{user.firstName} {user.lastName}</span>
           <span className={`text-xs ${getRoleColor(user.role)}`}>
             {user.role}
           </span>
@@ -61,7 +87,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
           {user.status}
         </StatusBadge>
       </div>
-    </button>
+    </div>
   );
 
   return (

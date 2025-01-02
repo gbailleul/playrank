@@ -57,6 +57,52 @@ export const auth = {
   getAllPlayers: async () => {
     return client.get<User[]>('/users/players');
   },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    return client.post('/auth/logout');
+  },
+
+  updateAvatar: async (avatarData: string | File) => {
+    const formData = new FormData();
+    
+    try {
+      if (avatarData instanceof File) {
+        console.log('Uploading File object:', avatarData);
+        formData.append('avatar', avatarData);
+      } else if (avatarData.startsWith('data:')) {
+        console.log('Converting base64 to File');
+        const response = await fetch(avatarData);
+        const blob = await response.blob();
+        const file = new File([blob], 'avatar.png', { type: 'image/png' });
+        console.log('Created File from base64:', file);
+        formData.append('avatar', file);
+      } else {
+        console.log('Converting URL to File:', avatarData);
+        const response = await fetch(avatarData);
+        const contentType = response.headers.get('content-type') || 'image/png';
+        const blob = await response.blob();
+        const file = new File([blob], 'avatar.png', { type: contentType });
+        console.log('Created File from URL:', file);
+        formData.append('avatar', file);
+      }
+
+      // Log FormData contents
+      console.log('FormData entries:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+      
+      return client.patch<User>('/users/avatar', formData, {
+        headers: {
+          // Ne pas définir Content-Type, il sera automatiquement défini avec le boundary correct
+        },
+      });
+    } catch (error) {
+      console.error('Error in updateAvatar:', error);
+      throw error;
+    }
+  },
 };
 
 export const gameService = {
