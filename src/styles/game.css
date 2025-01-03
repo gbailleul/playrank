@@ -43,21 +43,7 @@ body {
 
 /* Boutons */
 .game-button {
-  position: relative;
-  padding: 0.75rem 1.5rem;
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 500;
-  color: var(--text-primary);
-  background: var(--glass-bg);
-  border: 1px solid var(--neon-primary);
-  border-radius: 4px;
-  box-shadow: var(--neon-glow-sm);
-  backdrop-filter: blur(8px);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  overflow: hidden;
+  @apply bg-gradient-to-br from-[var(--neon-primary)] to-[var(--neon-secondary)] text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:brightness-125 transition-all duration-200;
 }
 
 .game-button::before {
@@ -92,8 +78,7 @@ body {
 }
 
 .game-button-secondary {
-  border-color: var(--neon-secondary);
-  box-shadow: 0 0 5px rgba(123, 44, 244, 0.5);
+  @apply bg-gradient-to-br from-[var(--neon-tertiary)] to-[var(--neon-accent)] text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:brightness-125 transition-all duration-200;
 }
 
 .game-button-secondary:hover {
@@ -103,19 +88,7 @@ body {
 
 /* Cartes */
 .game-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 1.5rem;
-  position: relative;
-  backdrop-filter: blur(8px);
-  box-shadow: var(--glass-shadow);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--glass-shadow), var(--neon-glow-sm);
+  @apply bg-[var(--glass-bg)] backdrop-blur-sm rounded-lg border border-[var(--glass-border)] shadow-lg;
 }
 
 /* Inputs */
@@ -179,4 +152,45 @@ body {
 
 .game-title:hover::after {
   transform: scaleX(1);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
+    transform: translateY(0);
+  }
+  50% { 
+    text-shadow: 0 0 20px var(--neon-primary), 0 0 30px var(--neon-primary);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.active-player-indicator {
+  animation: pulse-glow 2s ease-in-out infinite;
+  position: relative;
+}
+
+.active-player-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
 } 

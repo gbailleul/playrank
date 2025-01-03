@@ -109,4 +109,18 @@ export interface RegisterDto {
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface Player {
+  id: string;
+  username: string;
+}
+
+export interface PlayerStats {
+  id: string;
+  username: string;
+  dartsThrown: number;
+  accuracy: number;
+  lastScore: number;
+  score: number;
 } 

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { gameService } from '../api/services';
-import type { GameSession } from '../types';
+import type { GameSession as GameSessionType, Game } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  XCircleIcon,
-} from '@heroicons/react/24/outline';
 import DartBoard from '../components/molecules/DartBoard';
+import { XCircleIcon } from '@heroicons/react/24/outline';
 
 interface WebSocketMessage {
   type: 'score_update' | 'game_status_update';
@@ -17,25 +15,22 @@ const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [session, setSession] = useState<GameSession | null>(null);
+  const [session, setSession] = useState<GameSessionType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentScore, setCurrentScore] = useState<number>(0);
-  const [currentTurn, setCurrentTurn] = useState<number>(1);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [selectedScore, setSelectedScore] = useState<number | null>(null);
-  const [selectedMultiplier, setSelectedMultiplier] = useState<number>(1);
+  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
 
   // Fetch game session data
   const fetchSession = useCallback(async () => {
     if (!id) return;
     
     try {
-      const { data: game } = await gameService.getSession(id);
-      const activeSession = game.sessions?.[game.sessions.length - 1];
-      setSession(activeSession || null);
-      if (game.gameType === 'DARTS' && activeSession) {
-        setCurrentScore(game.maxScore);
+      const { data } = await gameService.getSession(id);
+      const gameSession = data.sessions?.[data.sessions.length - 1];
+      if (gameSession) {
+        setSession(gameSession);
       }
     } catch (err) {
       console.error('Error loading session:', err);
@@ -49,7 +44,7 @@ const GameSession: React.FC = () => {
   useEffect(() => {
     if (!id) return;
 
-    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
     const websocket = new WebSocket(`${WS_URL}/games/${id}`);
 
     websocket.onmessage = (event) => {
@@ -70,14 +65,14 @@ const GameSession: React.FC = () => {
     fetchSession();
   }, [fetchSession]);
 
-  const handleScoreSubmit = async (points: number) => {
+  const handleScoreSubmit = async (score: number) => {
     if (!session || !user) return;
 
     try {
-      await gameService.addScore(session.game.id, session.id, {
+      await gameService.addScore(session.gameId, session.id, {
         playerId: user.id,
-        points,
-        turnNumber: currentTurn
+        points: score,
+        turnNumber: session.players.find(p => p.player.id === user.id)?.scores?.length || 0
       });
 
       // Send WebSocket update
@@ -85,10 +80,12 @@ const GameSession: React.FC = () => {
         type: 'score_update',
         gameId: session.id,
         playerId: user.id,
-        score: points
+        score
       }));
 
-      setCurrentTurn(prev => prev + 1);
+      // Passer au joueur suivant
+      setActivePlayerIndex((current) => (current + 1) % session.players.length);
+      setSelectedScore(null);
       await fetchSession();
     } catch (err) {
       setError('Failed to update score');
@@ -99,7 +96,7 @@ const GameSession: React.FC = () => {
     if (!session) return;
 
     try {
-      await gameService.endSession(session.game.id, session.id, winnerId);
+      await gameService.endSession(session.gameId, session.id, winnerId);
       
       // Send WebSocket update
       ws?.send(JSON.stringify({
@@ -112,13 +109,6 @@ const GameSession: React.FC = () => {
     } catch (err) {
       setError('Failed to end game');
     }
-  };
-
-  const handleScoreSelect = (score: number, multiplier: number) => {
-    const points = score * multiplier;
-    setSelectedScore(points);
-    setSelectedMultiplier(multiplier);
-    setCurrentScore(points);
   };
 
   if (loading) {
@@ -139,19 +129,27 @@ const GameSession: React.FC = () => {
     );
   }
 
-  const isDarts = session?.game?.gameType === 'DARTS';
+  const activePlayer = session.players[activePlayerIndex];
+  const isCurrentPlayerActive = activePlayer?.player.id === user?.id;
 
   return (
-    <div className="mx-auto p-6">
-      <div className="game-card">
-        <div className="flex justify-between items-center mb-8">
+    <div className="p-4">
+      <div className="game-card p-6">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="game-title text-2xl">{session?.game?.name}</h1>
-            <p className="text-[var(--text-secondary)]">
-              {session?.game?.gameType} - {session?.status}
-            </p>
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl text-[var(--text-secondary)] opacity-75">
+                {session.game?.name || 'Partie de fléchettes'}
+              </h1>
+              {!isCurrentPlayerActive && (
+                <div className="active-player-indicator text-2xl font-bold text-[var(--neon-primary)]">
+                  Au tour de {activePlayer?.player.username}
+                </div>
+              )}
+            </div>
+            <p className="text-[var(--text-secondary)]">{session.status}</p>
           </div>
-          {session?.status === 'IN_PROGRESS' && (
+          {session.status === 'IN_PROGRESS' && (
             <button
               onClick={() => session.players[0] && handleEndGame(session.players[0].player.id)}
               className="game-button-secondary flex items-center"
@@ -169,108 +167,66 @@ const GameSession: React.FC = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left column: Scoreboard and Recent Moves */}
-          <div className="space-y-6">
-            {/* Scoreboard */}
-            <div className="game-card">
-              <h2 className="game-title text-xl mb-4">Tableau des scores</h2>
-              <div className="space-y-4">
-                {session?.players?.map((playerSession) => (
-                  <div
-                    key={playerSession.id}
-                    className={`game-card ${playerSession.player.id === user?.id ? 'border-[var(--neon-primary)]' : ''}`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full border border-[var(--neon-primary)] flex items-center justify-center bg-[var(--glass-bg)]">
-                          {playerSession.player.username[0]}
-                        </div>
-                        <span className="ml-3 font-medium">
-                          {playerSession.player.username}
-                        </span>
-                      </div>
-                      <div className="text-2xl font-bold text-[var(--neon-primary)]">
-                        {isDarts
-                          ? (session?.game?.maxScore || 0) - (playerSession.currentScore || 0)
-                          : playerSession.currentScore}
-                      </div>
+          {/* Tableau des scores */}
+          <div className="space-y-4">
+            {session.players.map((playerGame, index) => (
+              <div 
+                key={playerGame.id}
+                className={`p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
+                  index === activePlayerIndex ? 'ring-2 ring-[var(--neon-primary)]' : ''
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[var(--neon-primary)] flex items-center justify-center text-white">
+                      {playerGame.player.username?.charAt(0).toUpperCase()}
                     </div>
-
-                    {session?.status === 'IN_PROGRESS' &&
-                      user?.id === playerSession.player.id && (
-                        <div className="mt-4">
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              value={currentScore}
-                              onChange={(e) =>
-                                setCurrentScore(Math.max(0, parseInt(e.target.value) || 0))
-                              }
-                              className="game-input w-24"
-                              min="0"
-                              max={isDarts ? session?.game?.maxScore : undefined}
-                            />
-                            <button
-                              onClick={() => handleScoreSubmit(currentScore)}
-                              className="game-button"
-                            >
-                              Submit Score
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    <span className="text-lg font-medium text-[var(--text-primary)]">
+                      {playerGame.player.username}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <span className="text-2xl font-bold text-[var(--neon-primary)]">
+                    {(session.game?.maxScore || 501) - (playerGame.currentScore || 0)}
+                  </span>
+                </div>
 
-            {/* Recent Moves */}
-            <div className="game-card">
-              <h2 className="game-title text-xl mb-4">Derniers coups</h2>
-              <div className="space-y-3">
-                {session?.players
-                  ?.flatMap(p => p.scores || [])
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .slice(0, 10)
-                  .map((score) => (
-                    <div
-                      key={score.id}
-                      className="game-card"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-full border border-[var(--neon-primary)] flex items-center justify-center bg-[var(--glass-bg)]">
-                            {score.playerGame.player.username[0]}
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium">
-                              {score.playerGame.player.username}
-                            </p>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Tour {score.turnNumber}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-lg font-semibold text-[var(--neon-primary)]">
-                          {isDarts ? '-' : '+'}{score.value}
-                        </div>
-                      </div>
+                {/* Statistiques du joueur */}
+                <div className="grid grid-cols-3 gap-4 mt-2">
+                  <div className="text-center">
+                    <div className="text-sm text-[var(--text-secondary)]">Fléchettes</div>
+                    <div className="text-lg font-medium text-[var(--text-primary)]">
+                      {(playerGame.scores?.length || 0) * 3}
                     </div>
-                  ))}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-[var(--text-secondary)]">Précision</div>
+                    <div className="text-lg font-medium text-[var(--text-primary)]">
+                      {Math.round(
+                        ((playerGame.scores?.filter(s => s.value > 40).length || 0) /
+                        (playerGame.scores?.length || 1)) * 100
+                      )}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-[var(--text-secondary)]">Dernier score</div>
+                    <div className="text-lg font-medium text-[var(--text-primary)]">
+                      {playerGame.scores?.[playerGame.scores.length - 1]?.value || 0}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
-          {/* Right column: Dartboard */}
+          {/* Cible de fléchettes */}
           <div className="flex flex-col items-center">
-            <DartBoard onScoreSelect={handleScoreSelect} />
-            {selectedScore !== null && (
+            <DartBoard 
+              onScoreSelect={(score) => isCurrentPlayerActive ? setSelectedScore(score) : null}
+            />
+            {selectedScore !== null && isCurrentPlayerActive && (
               <div className="mt-4 text-center">
                 <div className="text-lg font-semibold text-[var(--neon-primary)]">
                   Score sélectionné: {selectedScore}
-                </div>
-                <div className="text-sm text-[var(--text-secondary)]">
-                  ({selectedScore / selectedMultiplier} × {selectedMultiplier})
                 </div>
                 <button
                   onClick={() => handleScoreSubmit(selectedScore)}

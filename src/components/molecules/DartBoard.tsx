@@ -42,27 +42,21 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
     const svg = event.currentTarget.closest('svg');
     if (!svg) return;
 
-    const pt = svg.createSVGPoint();
-    const rect = svg.getBoundingClientRect();
-    pt.x = event.clientX - rect.left;
-    pt.y = event.clientY - rect.top;
+    const svgRect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
     
-    // Conversion en coordonnées SVG
-    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    // Conversion des coordonnées de la souris en coordonnées SVG
+    const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
+    const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
 
-    const newHit: DartHit = { 
-      score, 
-      multiplier, 
-      x: svgP.x, 
-      y: svgP.y 
-    };
+    const newHit: DartHit = { score, multiplier, x, y };
     const newHits = [...dartHits, newHit];
     setDartHits(newHits);
 
     // Si on a 3 fléchettes, on calcule le score total
     if (newHits.length === 3) {
       const totalScore = newHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
-      onScoreSelect(totalScore, 1); // On envoie le score total
+      onScoreSelect(totalScore, 1);
     }
   };
 
@@ -148,7 +142,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         {/* Double (x2) */}
         <path
           d={paths[0]}
-          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors ${
+          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
             isHit(0) ? 'fill-[var(--neon-primary)] opacity-70' : isEvenSection ? "fill-[#1a1a1a]" : "fill-[#000]"
           }`}
           onClick={(e) => handleHit(score, 2, e)}
@@ -156,7 +150,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         {/* Outer single (x1) */}
         <path
           d={paths[1]}
-          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors ${
+          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
             isHit(1) ? 'fill-[var(--neon-primary)] opacity-70' : isEvenSection ? "fill-[#cc0000]" : "fill-[#fff]"
           }`}
           onClick={(e) => handleHit(score, 1, e)}
@@ -164,7 +158,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         {/* Triple (x3) */}
         <path
           d={paths[2]}
-          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors ${
+          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
             isHit(2) ? 'fill-[var(--neon-primary)] opacity-70' : isEvenSection ? "fill-[#1a1a1a]" : "fill-[#000]"
           }`}
           onClick={(e) => handleHit(score, 3, e)}
@@ -172,7 +166,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         {/* Inner single (x1) */}
         <path
           d={paths[3]}
-          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors ${
+          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
             isHit(3) ? 'fill-[var(--neon-primary)] opacity-70' : isEvenSection ? "fill-[#cc0000]" : "fill-[#fff]"
           }`}
           onClick={(e) => handleHit(score, 1, e)}
@@ -193,74 +187,139 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   };
 
   return (
-    <div className="relative">
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        className="game-card p-4"
-      >
-        {/* Cercle de fond */}
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          className="fill-[#2a2a2a] stroke-[#a0a0a0] stroke-2"
-        />
-        
-        {/* Sections numérotées */}
-        {sections.map((score, index) => createSection(index, score))}
-        
-        {/* Double bull (50 points) */}
-        <circle
-          cx={center}
-          cy={center}
-          r={bullOuter}
-          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors ${
-            dartHits.some(hit => hit.score === 25 && hit.multiplier === 2)
-              ? 'fill-[var(--neon-primary)] opacity-70'
-              : 'fill-[#1a1a1a]'
-          }`}
-          onClick={(e) => handleHit(25, 2, e)}
-        />
-        
-        {/* Single bull (25 points) */}
-        <circle
-          cx={center}
-          cy={center}
-          r={bullInner}
-          className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors ${
-            dartHits.some(hit => hit.score === 25 && hit.multiplier === 1)
-              ? 'fill-[var(--neon-primary)] opacity-70'
-              : 'fill-[#cc0000]'
-          }`}
-          onClick={(e) => handleHit(25, 1, e)}
-        />
+    <div className="relative inline-block">
+      <div className="p-4">
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+        >
+          {/* Cercle de fond */}
+          <circle
+            cx={center}
+            cy={center}
+            r={radius}
+            className="fill-[#2a2a2a] stroke-[#a0a0a0] stroke-2"
+          />
+          
+          {/* Sections numérotées */}
+          {sections.map((score, index) => createSection(index, score))}
+          
+          {/* Double bull (50 points) */}
+          <circle
+            cx={center}
+            cy={center}
+            r={bullOuter}
+            className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
+              dartHits.some(hit => hit.score === 25 && hit.multiplier === 2)
+                ? 'fill-[var(--neon-primary)] opacity-70'
+                : 'fill-[#1a1a1a]'
+            }`}
+            onClick={(e) => handleHit(25, 2, e)}
+          />
+          
+          {/* Single bull (25 points) */}
+          <circle
+            cx={center}
+            cy={center}
+            r={bullInner}
+            className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
+              dartHits.some(hit => hit.score === 25 && hit.multiplier === 1)
+                ? 'fill-[var(--neon-primary)] opacity-70'
+                : 'fill-[#cc0000]'
+            }`}
+            onClick={(e) => handleHit(25, 1, e)}
+          />
 
-        {/* Affichage des impacts */}
-        {dartHits.map((hit, index) => (
-          <g key={index}>
-            <circle
-              cx={hit.x}
-              cy={hit.y}
-              r={4}
-              className="fill-white stroke-black stroke-1"
-            />
-            <circle
-              cx={hit.x}
-              cy={hit.y}
-              r={6}
-              className="fill-none stroke-white stroke-1 opacity-50"
-            />
-          </g>
-        ))}
-      </svg>
+          {/* Affichage des impacts */}
+          {dartHits.map((hit, index) => (
+            <g key={index}>
+              <circle
+                cx={hit.x}
+                cy={hit.y}
+                r={4}
+                className="fill-white stroke-black stroke-1"
+              />
+              <circle
+                cx={hit.x}
+                cy={hit.y}
+                r={6}
+                className="fill-none stroke-white stroke-1 opacity-50"
+              />
+            </g>
+          ))}
+        </svg>
 
-      {/* Compteur de fléchettes */}
-      <div className="absolute top-2 right-2 bg-[var(--glass-bg)] px-3 py-1 rounded-full">
-        <span className="text-[var(--text-primary)]">
-          Fléchettes : {dartHits.length}/3
-        </span>
+        {/* Indicateur de fléchettes avec scores */}
+        <div className="mt-4 flex justify-center items-center gap-6">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="flex flex-col items-center gap-1">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                className={`transition-all duration-200 ${
+                  index < dartHits.length ? 'opacity-100' : 'opacity-40'
+                }`}
+              >
+                {/* Nouvelle fléchette design */}
+                <g transform="rotate(-45, 12, 12)">
+                  {/* Pointe */}
+                  <path
+                    d="M12 2L11 6L13 6L12 2Z"
+                    fill={index < dartHits.length ? 'white' : '#888'}
+                  />
+                  {/* Corps */}
+                  <rect
+                    x="11"
+                    y="6"
+                    width="2"
+                    height="12"
+                    fill={index < dartHits.length ? 'var(--neon-primary)' : '#666'}
+                  />
+                  {/* Empennage */}
+                  <path
+                    d="M7 16L12 18L17 16L12 22L7 16Z"
+                    fill={index < dartHits.length ? 'var(--neon-primary)' : '#666'}
+                  />
+                  {/* Effet brillant */}
+                  {index < dartHits.length && (
+                    <rect
+                      x="11.5"
+                      y="6"
+                      width="0.5"
+                      height="12"
+                      fill="white"
+                      opacity="0.5"
+                    />
+                  )}
+                </g>
+              </svg>
+              {/* Score de la fléchette */}
+              {index < dartHits.length && (
+                <span className="text-[var(--text-primary)] font-medium text-lg">
+                  {dartHits[index].score * dartHits[index].multiplier}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Bouton de validation */}
+        {dartHits.length === 3 && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
+                onScoreSelect(totalScore, 1);
+                setDartHits([]);
+              }}
+              className="game-button"
+            >
+              Valider le score
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
