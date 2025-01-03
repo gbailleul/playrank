@@ -4,6 +4,7 @@ import type { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUserAvatar: (avatarData: string | File) => Promise<void>;
@@ -13,12 +14,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
         setUser(null);
+        setLoading(false);
         return;
       }
 
@@ -29,6 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Auth check failed:', error);
         localStorage.removeItem('token');
         setUser(null);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -65,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUserAvatar }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUserAvatar }}>
       {children}
     </AuthContext.Provider>
   );

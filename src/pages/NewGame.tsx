@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { gameService, gameSessionService } from '../api/services';
-import { Game } from '../types';
+import { gameService } from '../api/services';
+import { CreateGameDto, GameType } from '../types';
 
 const NewGame: React.FC = () => {
   const navigate = useNavigate();
-  const [gameType, setGameType] = useState<'DARTS' | 'BILLIARDS'>('DARTS');
+  const [gameType, setGameType] = useState<GameType>('DARTS');
   const [name, setName] = useState('');
   const [maxScore, setMaxScore] = useState(501); // Default for darts
   const [error, setError] = useState('');
@@ -18,24 +18,21 @@ const NewGame: React.FC = () => {
 
     try {
       // Create the game
-      const gameData: Partial<Game> = {
+      const gameData: CreateGameDto = {
         name,
-        game_type: gameType,
+        gameType,
         description: `${gameType} game - ${name}`,
-        max_score: maxScore,
-        min_players: 2,
-        max_players: gameType === 'DARTS' ? 4 : 2,
+        maxScore,
+        minPlayers: 2,
+        maxPlayers: gameType === 'DARTS' ? 4 : 2,
       };
 
       const { data: game } = await gameService.createGame(gameData);
 
       // Create a game session
-      const { data: session } = await gameSessionService.createSession({
-        game: game.id,
-        players: [], // Players will be added later
-      });
+      const { data: session } = await gameService.createGameSession(game.id, []);
 
-      navigate(`/games/${session.id}/setup`);
+      navigate(`/games/${game.id}`);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create game');
     } finally {

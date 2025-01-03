@@ -1,5 +1,5 @@
 import client from './client';
-import type { User, CreateGameDto, Game, GameSession, AddScorePayload, Score } from '../types';
+import type { User, CreateGameDto, Game, Score } from '../types';
 
 interface LoginResponse {
   user: User;
@@ -121,39 +121,29 @@ export const gameService = {
   createGameSession: async (gameId: string, players: string[]) => {
     return client.post<Game>(`/games/${gameId}/sessions`, { players });
   },
-};
 
-/**
- * Service de gestion des sessions de jeu.
- * Gère les opérations liées aux sessions de jeu en cours.
- */
-export const gameSessionService = {
-  /**
-   * Récupère une session de jeu.
-   * @param sessionId - ID de la session
-   */
-  getSession: async (sessionId: string) => {
-    return client.get<GameSession>(`/games/sessions/${sessionId}`);
+  getActiveSession: async (gameId: string) => {
+    const response = await client.get<Game>(`/games/${gameId}`);
+    const game = response.data;
+    const activeSession = game.sessions?.[game.sessions.length - 1];
+    if (!activeSession) {
+      throw new Error('No active session found');
+    }
+    return { data: activeSession };
   },
 
-  /**
-   * Ajoute un score à une session.
-   * @param sessionId - ID de la session
-   * @param payload - Données du score
-   */
-  addScore: async (sessionId: string, payload: AddScorePayload) => {
-    return client.post<Score>(`/games/sessions/${sessionId}/scores`, payload);
+  getSession: async (gameId: string) => {
+    return client.get<Game>(`/games/${gameId}`);
   },
 
-  /**
-   * Termine une session de jeu.
-   * @param sessionId - ID de la session
-   * @param winnerId - ID du gagnant
-   */
-  endSession: async (sessionId: string, winnerId: string) => {
-    return client.patch(`/games/sessions/${sessionId}`, {
+  addScore: async (gameId: string, sessionId: string, payload: { playerId: string; points: number; turnNumber: number }) => {
+    return client.post<Score>(`/games/${gameId}/sessions/${sessionId}/scores`, payload);
+  },
+
+  endSession: async (gameId: string, sessionId: string, winnerId: string) => {
+    return client.patch(`/games/${gameId}/sessions/${sessionId}`, {
       status: 'COMPLETED',
       winnerId
     });
-  }
+  },
 }; 

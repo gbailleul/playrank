@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { gameSessionService } from '../api/services';
+import { gameService } from '../api/services';
 import type { GameSession } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -28,12 +28,14 @@ const GameSession: React.FC = () => {
     if (!id) return;
     
     try {
-      const { data } = await gameSessionService.getSession(id);
-      setSession(data);
-      if (data.game.gameType === 'DARTS') {
-        setCurrentScore(data.game.maxScore);
+      const { data: game } = await gameService.getSession(id);
+      const activeSession = game.sessions?.[game.sessions.length - 1];
+      setSession(activeSession || null);
+      if (game.gameType === 'DARTS' && activeSession) {
+        setCurrentScore(game.maxScore);
       }
     } catch (err) {
+      console.error('Error loading session:', err);
       setError('Failed to load game session');
     } finally {
       setLoading(false);
@@ -69,17 +71,17 @@ const GameSession: React.FC = () => {
     if (!session || !user) return;
 
     try {
-      await gameSessionService.addScore(session.id, {
-        player_id: user.id,
+      await gameService.addScore(session.game.id, session.id, {
+        playerId: user.id,
         points,
-        turn_number: currentTurn
+        turnNumber: currentTurn
       });
 
       // Send WebSocket update
       ws?.send(JSON.stringify({
         type: 'score_update',
-        game_id: session.id,
-        player_id: user.id,
+        gameId: session.id,
+        playerId: user.id,
         score: points
       }));
 
@@ -94,12 +96,12 @@ const GameSession: React.FC = () => {
     if (!session) return;
 
     try {
-      await gameSessionService.endSession(session.id, winnerId);
+      await gameService.endSession(session.game.id, session.id, winnerId);
       
       // Send WebSocket update
       ws?.send(JSON.stringify({
         type: 'game_status_update',
-        game_id: session.id,
+        gameId: session.id,
         status: 'COMPLETED'
       }));
 
@@ -127,19 +129,19 @@ const GameSession: React.FC = () => {
     );
   }
 
-  const isDarts = session.game.gameType === 'DARTS';
+  const isDarts = session?.game?.gameType === 'DARTS';
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="mx-auto p-6">
       <div className="game-card">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="game-title text-2xl">{session.game.name}</h1>
+            <h1 className="game-title text-2xl">{session?.game?.name}</h1>
             <p className="text-[var(--text-secondary)]">
-              {session.game.gameType} - {session.status}
+              {session?.game?.gameType} - {session?.status}
             </p>
           </div>
-          {session.status === 'IN_PROGRESS' && (
+          {session?.status === 'IN_PROGRESS' && (
             <button
               onClick={() => session.players[0] && handleEndGame(session.players[0].player.id)}
               className="game-button-secondary flex items-center"
@@ -161,7 +163,7 @@ const GameSession: React.FC = () => {
           <div className="game-card">
             <h2 className="game-title text-xl mb-4">Tableau des scores</h2>
             <div className="space-y-4">
-              {session.players.map((playerSession) => (
+              {session?.players?.map((playerSession) => (
                 <div
                   key={playerSession.id}
                   className={`game-card ${playerSession.player.id === user?.id ? 'border-[var(--neon-primary)]' : ''}`}
@@ -177,12 +179,12 @@ const GameSession: React.FC = () => {
                     </div>
                     <div className="text-2xl font-bold text-[var(--neon-primary)]">
                       {isDarts
-                        ? session.game.maxScore - playerSession.currentScore
+                        ? (session?.game?.maxScore || 0) - (playerSession.currentScore || 0)
                         : playerSession.currentScore}
                     </div>
                   </div>
 
-                  {session.status === 'IN_PROGRESS' &&
+                  {session?.status === 'IN_PROGRESS' &&
                     user?.id === playerSession.player.id && (
                       <div className="mt-4">
                         <div className="flex gap-2">
@@ -194,7 +196,7 @@ const GameSession: React.FC = () => {
                             }
                             className="game-input w-24"
                             min="0"
-                            max={isDarts ? session.game.maxScore : undefined}
+                            max={isDarts ? session?.game?.maxScore : undefined}
                           />
                           <button
                             onClick={() => handleScoreSubmit(currentScore)}
@@ -214,8 +216,8 @@ const GameSession: React.FC = () => {
           <div className="game-card">
             <h2 className="game-title text-xl mb-4">Derniers coups</h2>
             <div className="space-y-3">
-              {session.players
-                .flatMap(p => p.scores || [])
+              {session?.players
+                ?.flatMap(p => p.scores || [])
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 10)
                 .map((score) => (

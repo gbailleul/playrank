@@ -7,6 +7,7 @@ import TestConnection from './components/TestConnection';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CreateGame from './pages/CreateGame';
+import GameSession from './pages/GameSession';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -80,7 +81,7 @@ const Router = () => {
         <Route path="profile" element={<Profile />} />
         <Route path="test-connection" element={<TestConnection />} />
         <Route path="games/new" element={<CreateGame />} />
-        <Route path="games/:id" element={<div>Game Details</div>} />
+        <Route path="games/:id" element={<GameSession />} />
       </Route>
 
       {/* Catch all route */}
