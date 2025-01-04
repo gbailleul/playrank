@@ -122,7 +122,7 @@ const GameSession: React.FC = () => {
     try {
       const { data } = await gameService.addScore(session.gameId, session.id, {
         playerId: session.players[activePlayerIndex].player.id,
-        points: -score,
+        points: score,
         turnNumber: session.players[activePlayerIndex].scores?.length || 0
       });
 
