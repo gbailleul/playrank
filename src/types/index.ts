@@ -133,4 +133,11 @@ export interface ScoreResponse {
   session: GameSession;
   currentPlayerId: string;
   isWinner: boolean;
+}
+
+export interface AddScoreData {
+  playerId: string;
+  points: number;
+  turnNumber: number;
+  isDouble?: boolean;
 } 

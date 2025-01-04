@@ -6,7 +6,7 @@ import React, { useState } from 'react';
  * @param disabled Indique si la cible est désactivée
  */
 interface DartBoardProps {
-  onScoreSelect: (score: number) => void;
+  onScoreSelect: (score: number, isDouble: boolean) => void;
   disabled?: boolean;
 }
 
@@ -58,8 +58,10 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
   const handleValidate = () => {
     // Calculer le score total des 3 fléchettes
     const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
-    // Appeler la fonction du parent avec le score total
-    onScoreSelect(totalScore);
+    // Vérifier si l'un des lancers est un double ou un triple
+    const hasMultiplier = dartHits.some(hit => hit.multiplier >= 2);
+    // Appeler la fonction du parent avec le score total et l'info du multiplicateur
+    onScoreSelect(totalScore, hasMultiplier);
     // Réinitialiser les fléchettes
     setDartHits([]);
   };

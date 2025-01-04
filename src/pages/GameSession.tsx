@@ -6,6 +6,7 @@ import { GameType } from "../types/index";
 import DartBoard from "../components/molecules/DartBoard";
 import { gameService } from "../api/services";
 import { XCircleIcon } from '@heroicons/react/24/outline';
+import VictoryModal from "../components/molecules/VictoryModal";
 
 interface PlayerScore {
   index: number;
@@ -22,6 +23,8 @@ const GameSession: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [infoMessage, setInfoMessage] = useState<string>('');
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [winner, setWinner] = useState<{ username: string; id: string } | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [activePlayerIndex, setActivePlayerIndex] = useState<number>(() => {
     const saved = localStorage.getItem(`activePlayer_${id}`);
@@ -129,7 +132,7 @@ const GameSession: React.FC = () => {
     fetchSession();
   }, [fetchSession]);
 
-  const handleScoreSelect = async (score: number) => {
+  const handleScoreSelect = async (score: number, isDouble: boolean) => {
     if (!session) return;
 
     const currentPlayer = session.players[activePlayerIndex];
@@ -138,10 +141,11 @@ const GameSession: React.FC = () => {
     // Si le score dépasse, on envoie un score de 0
     if (remainingScore < 0) {
       try {
-        const { data } = await gameService.addScore(session.gameId, session.id, {
+        const { data } = await gameService.addScore(session.game.id, session.id, {
           playerId: currentPlayer.player.id,
           points: 0,
-          turnNumber: currentPlayer.scores?.length || 0
+          turnNumber: currentPlayer.scores?.length || 0,
+          isDouble
         });
 
         if (data.score) {
@@ -173,16 +177,14 @@ const GameSession: React.FC = () => {
 
     // Score normal
     try {
-      const { data } = await gameService.addScore(session.gameId, session.id, {
+      const { data } = await gameService.addScore(session.game.id, session.id, {
         playerId: currentPlayer.player.id,
         points: score,
-        turnNumber: currentPlayer.scores?.length || 0
+        turnNumber: currentPlayer.scores?.length || 0,
+        isDouble
       });
 
       if (data.score) {
-        // Calculer le nouveau score après ce lancer
-        const newRemainingScore = currentPlayer.currentScore - score;
-
         setSession((prev: GameSession | null) => {
           if (!prev) return prev;
           return {
@@ -192,7 +194,7 @@ const GameSession: React.FC = () => {
                 return {
                   ...p,
                   scores: [...p.scores, data.score],
-                  currentScore: newRemainingScore,
+                  currentScore: remainingScore,
                 };
               }
               return p;
@@ -201,7 +203,7 @@ const GameSession: React.FC = () => {
         });
 
         // Si le joueur a gagné (score = 0)
-        if (newRemainingScore === 0) {
+        if (remainingScore === 0) {
           handleEndGame(currentPlayer.player.id);
           return;
         }
@@ -226,16 +228,25 @@ const GameSession: React.FC = () => {
     if (!session) return;
 
     try {
-      await gameService.endSession(session.gameId, session.id, winnerId);
+      await gameService.endSession(session.game.id, session.id, winnerId);
+      
+      // Trouver le joueur gagnant
+      const winningPlayer = session.players.find(p => p.player.id === winnerId);
+      if (winningPlayer) {
+        setWinner({
+          username: winningPlayer.player.username,
+          id: winnerId
+        });
+        setShowVictoryModal(true);
+      }
       
       ws?.send(JSON.stringify({
         type: 'game_status_update',
-        gameId: session.id,
+        gameId: session.game.id,
         status: 'COMPLETED'
       }));
-
-      navigate('/');
     } catch (err) {
+      console.error("Error ending game:", err);
       setError('Failed to end game');
     }
   };
@@ -267,6 +278,13 @@ const GameSession: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {showVictoryModal && winner && (
+        <VictoryModal
+          winner={winner}
+          onClose={() => setShowVictoryModal(false)}
+        />
+      )}
+
       {/* Message informatif */}
       {infoMessage && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
