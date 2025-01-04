@@ -88,7 +88,7 @@ export interface PlayerGame {
 
 export interface Score {
   id: string;
-  value: number;
+  points: number;
   turnNumber: number;
   notes?: string;
   createdAt: string;

@@ -1,26 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { gameService } from '../api/services';
-import type { GameSession as GameSessionType, Game } from '../types';
-import { useAuth } from '../contexts/AuthContext';
-import DartBoard from '../components/molecules/DartBoard';
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import type { GameSession, PlayerGame, Score } from "../types/index";
+import { gameService } from "../api/services";
+import DartBoard from "../components/molecules/DartBoard";
 import { XCircleIcon } from '@heroicons/react/24/outline';
 
-interface WebSocketMessage {
-  type: 'score_update' | 'game_status_update';
-  data?: any;
+interface PlayerScore {
+  index: number;
+  playerId: string;
+  username: string;
+  scoresCount: number;
 }
 
 const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [session, setSession] = useState<GameSessionType | null>(null);
+  const [session, setSession] = useState<GameSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string>('');
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [selectedScore, setSelectedScore] = useState<number | null>(null);
-  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
+  const [activePlayerIndex, setActivePlayerIndex] = useState<number>(0);
 
   // Fetch game session data
   const fetchSession = useCallback(async () => {
@@ -33,13 +34,13 @@ const GameSession: React.FC = () => {
         setSession(gameSession);
 
         // Déterminer l'ordre initial des joueurs si aucun score n'existe
-        if (gameSession.players.every(p => !p.scores?.length)) {
+        if (gameSession.players.every((p: PlayerGame) => !p.scores?.length)) {
           setActivePlayerIndex(0);
           return;
         }
 
         // Trouver le dernier joueur qui a joué
-        const playerScores = gameSession.players.map((p, index) => ({
+        const playerScores = gameSession.players.map((p: PlayerGame, index: number) => ({
           index,
           playerId: p.player.id,
           username: p.player.username,
@@ -47,12 +48,12 @@ const GameSession: React.FC = () => {
         }));
 
         // Trier par nombre de scores (décroissant)
-        playerScores.sort((a, b) => b.scoresCount - a.scoresCount);
+        playerScores.sort((a: PlayerScore, b: PlayerScore) => b.scoresCount - a.scoresCount);
 
         // Le joueur avec le moins de scores doit jouer
-        const minScores = Math.min(...playerScores.map(p => p.scoresCount));
+        const minScores = Math.min(...playerScores.map((p: PlayerGame) => p.scores?.length || 0));
         const nextPlayerIndex = gameSession.players.findIndex(
-          p => (p.scores?.length || 0) === minScores
+          (p: PlayerGame) => (p.scores?.length || 0) === minScores
         );
 
         setActivePlayerIndex(nextPlayerIndex);
@@ -97,35 +98,40 @@ const GameSession: React.FC = () => {
     fetchSession();
   }, [fetchSession]);
 
-  const handleScoreSubmit = async (score: number) => {
+  const handleScoreSelect = async (score: number) => {
     if (!session) return;
 
     try {
       const { data } = await gameService.addScore(session.gameId, session.id, {
-        playerId: activePlayer.player.id,
-        points: score,
-        turnNumber: activePlayer.scores?.length || 0
+        playerId: session.players[activePlayerIndex].player.id,
+        points: -score,
+        turnNumber: session.players[activePlayerIndex].scores?.length || 0
       });
 
-      if (data.session) {
-        setSession(data.session);
+      if (data.score) {
+        setSession((prev: GameSession | null) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            players: prev.players.map((p: PlayerGame) => {
+              if (p.id === session.players[activePlayerIndex].id) {
+                return {
+                  ...p,
+                  scores: [...p.scores, data.score],
+                  currentScore: p.currentScore - score,
+                };
+              }
+              return p;
+            }),
+          };
+        });
+
+        // Passer au joueur suivant
         const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
         setActivePlayerIndex(nextPlayerIndex);
       }
-
-      if (data.isWinner) {
-        await handleEndGame(activePlayer.player.id);
-      }
-
-      ws?.send(JSON.stringify({
-        type: 'score_update',
-        gameId: session.id,
-        playerId: activePlayer.player.id,
-        score: score
-      }));
-
-    } catch (err) {
-      setError('Failed to update score');
+    } catch (error) {
+      console.error("Error adding score:", error);
     }
   };
 
@@ -196,7 +202,7 @@ const GameSession: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Tableau des scores */}
           <div className="space-y-4">
-            {session.players.map((playerGame, index) => (
+            {session.players.map((playerGame: PlayerGame, index: number) => (
               <div 
                 key={playerGame.id}
                 className={`p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
@@ -213,7 +219,7 @@ const GameSession: React.FC = () => {
                     </span>
                   </div>
                   <span className="text-2xl font-bold text-[var(--neon-primary)]">
-                    {(session.game?.maxScore || 501) - (playerGame.currentScore || 0)}
+                    {(session.game?.maxScore || 501) - playerGame.currentScore}
                   </span>
                 </div>
 
@@ -229,7 +235,7 @@ const GameSession: React.FC = () => {
                     <div className="text-sm text-[var(--text-secondary)]">Précision</div>
                     <div className="text-lg font-medium text-[var(--text-primary)]">
                       {Math.round(
-                        ((playerGame.scores?.filter(s => s.value > 40).length || 0) /
+                        ((playerGame.scores?.filter((s: Score) => s.points > 40).length || 0) /
                         (playerGame.scores?.length || 1)) * 100
                       )}%
                     </div>
@@ -237,7 +243,7 @@ const GameSession: React.FC = () => {
                   <div className="text-center">
                     <div className="text-sm text-[var(--text-secondary)]">Dernier score</div>
                     <div className="text-lg font-medium text-[var(--text-primary)]">
-                      {playerGame.scores?.[playerGame.scores.length - 1]?.value || 0}
+                      {playerGame.scores?.[playerGame.scores.length - 1]?.points || 0}
                     </div>
                   </div>
                 </div>
@@ -253,7 +259,7 @@ const GameSession: React.FC = () => {
               </div>
             )}
             <DartBoard 
-              onScoreSelect={handleScoreSubmit}
+              onScoreSelect={handleScoreSelect}
             />
           </div>
         </div>
