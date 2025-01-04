@@ -1,5 +1,5 @@
 import client from './client';
-import type { User, CreateGameDto, Game, Score } from '../types';
+import type { User, CreateGameDto, Game, Score, GameSession, ScoreResponse } from '../types';
 
 interface LoginResponse {
   user: User;
@@ -18,6 +18,12 @@ interface ValidationErrors {
 interface ErrorResponse {
   errors?: ValidationErrors;
   message?: string;
+}
+
+interface AddScoreData {
+  playerId: string;
+  points: number;
+  turnNumber: number;
 }
 
 export const auth = {
@@ -136,9 +142,8 @@ export const gameService = {
     return client.get<Game>(`/games/${gameId}`);
   },
 
-  addScore: async (gameId: string, sessionId: string, payload: { playerId: string; points: number; turnNumber: number }) => {
-    return client.post<Score>(`/games/${gameId}/sessions/${sessionId}/scores`, payload);
-  },
+  addScore: (gameId: string, sessionId: string, data: AddScoreData) =>
+    client.post<ScoreResponse>(`/games/${gameId}/sessions/${sessionId}/scores`, data),
 
   endSession: async (gameId: string, sessionId: string, winnerId: string) => {
     return client.patch(`/games/${gameId}/sessions/${sessionId}`, {

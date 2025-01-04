@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 /**
  * Props pour le composant DartBoard
  * @param onScoreSelect Callback appelé quand un score est sélectionné
+ * @param disabled Indique si la cible est désactivée
  */
 interface DartBoardProps {
   onScoreSelect: (score: number) => void;
+  disabled?: boolean;
 }
 
 interface DartHit {
@@ -27,42 +29,37 @@ interface DartHit {
  * Les sections sont numérotées de 1 à 20 dans un ordre spécifique,
  * avec le 20 en haut et alternant entre sections pour équilibrer les scores.
  */
-const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
+const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }) => {
   const [dartHits, setDartHits] = useState<DartHit[]>([]);
 
   // Gestion des impacts de fléchettes
   const handleHit = (score: number, multiplier: number, event: React.MouseEvent<SVGElement>) => {
+    if (disabled) return;
     if (dartHits.length >= 3) {
-      // Si on a déjà 3 fléchettes, on recommence
       setDartHits([]);
       return;
     }
 
-    // Calcul de la position relative au SVG
     const svg = event.currentTarget.closest('svg');
     if (!svg) return;
 
     const svgRect = svg.getBoundingClientRect();
     const viewBox = svg.viewBox.baseVal;
     
-    // Conversion des coordonnées de la souris en coordonnées SVG
     const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
     const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
 
     const newHit: DartHit = { score, multiplier, x, y };
     const newHits = [...dartHits, newHit];
     setDartHits(newHits);
-
-    // Si on a 3 fléchettes, on calcule le score total
-    if (newHits.length === 3) {
-      const totalScore = newHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
-      // On ne valide pas automatiquement, on attend le clic sur le bouton
-    }
   };
 
   const handleValidate = () => {
+    // Calculer le score total des 3 fléchettes
     const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
+    // Appeler la fonction du parent avec le score total
     onScoreSelect(totalScore);
+    // Réinitialiser les fléchettes
     setDartHits([]);
   };
 
@@ -193,7 +190,12 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   };
 
   return (
-    <div className="relative inline-block">
+    <div className={`relative inline-block ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+      {disabled && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
+          <div className="text-white text-xl font-bold">En attente de votre tour</div>
+        </div>
+      )}
       <div className="p-4">
         <svg
           width={size}

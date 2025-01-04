@@ -31,9 +31,33 @@ const GameSession: React.FC = () => {
       const gameSession = data.sessions?.[data.sessions.length - 1];
       if (gameSession) {
         setSession(gameSession);
+
+        // Déterminer l'ordre initial des joueurs si aucun score n'existe
+        if (gameSession.players.every(p => !p.scores?.length)) {
+          setActivePlayerIndex(0);
+          return;
+        }
+
+        // Trouver le dernier joueur qui a joué
+        const playerScores = gameSession.players.map((p, index) => ({
+          index,
+          playerId: p.player.id,
+          username: p.player.username,
+          scoresCount: p.scores?.length || 0
+        }));
+
+        // Trier par nombre de scores (décroissant)
+        playerScores.sort((a, b) => b.scoresCount - a.scoresCount);
+
+        // Le joueur avec le moins de scores doit jouer
+        const minScores = Math.min(...playerScores.map(p => p.scoresCount));
+        const nextPlayerIndex = gameSession.players.findIndex(
+          p => (p.scores?.length || 0) === minScores
+        );
+
+        setActivePlayerIndex(nextPlayerIndex);
       }
     } catch (err) {
-      console.error('Error loading session:', err);
       setError('Failed to load game session');
     } finally {
       setLoading(false);
@@ -42,14 +66,22 @@ const GameSession: React.FC = () => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    if (!id) return;
+    if (!session?.gameId) return;
 
-    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
-    const websocket = new WebSocket(`${WS_URL}/games/${id}`);
-
+    const wsUrl = `ws://localhost:8000/games`;
+    const websocket = new WebSocket(wsUrl);
+    
+    websocket.onopen = () => {
+      websocket.send(JSON.stringify({
+        type: 'join_game',
+        gameId: session.gameId,
+        playerId: user?.id
+      }));
+    };
+    
     websocket.onmessage = (event) => {
-      const message = JSON.parse(event.data) as WebSocketMessage;
-      if (message.type === 'score_update' || message.type === 'game_status_update') {
+      const data = JSON.parse(event.data);
+      if (data.type === 'score_update' || data.type === 'game_status_update') {
         fetchSession();
       }
     };
@@ -59,34 +91,39 @@ const GameSession: React.FC = () => {
     return () => {
       websocket.close();
     };
-  }, [id, fetchSession]);
+  }, [session?.gameId, user?.id, fetchSession]);
 
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
 
   const handleScoreSubmit = async (score: number) => {
-    if (!session || !user) return;
+    if (!session) return;
 
     try {
-      await gameService.addScore(session.gameId, session.id, {
-        playerId: user.id,
+      const { data } = await gameService.addScore(session.gameId, session.id, {
+        playerId: activePlayer.player.id,
         points: score,
-        turnNumber: session.players.find(p => p.player.id === user.id)?.scores?.length || 0
+        turnNumber: activePlayer.scores?.length || 0
       });
 
-      // Send WebSocket update
+      if (data.session) {
+        setSession(data.session);
+        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+        setActivePlayerIndex(nextPlayerIndex);
+      }
+
+      if (data.isWinner) {
+        await handleEndGame(activePlayer.player.id);
+      }
+
       ws?.send(JSON.stringify({
         type: 'score_update',
         gameId: session.id,
-        playerId: user.id,
-        score
+        playerId: activePlayer.player.id,
+        score: score
       }));
 
-      // Passer au joueur suivant
-      setActivePlayerIndex((current) => (current + 1) % session.players.length);
-      setSelectedScore(null);
-      await fetchSession();
     } catch (err) {
       setError('Failed to update score');
     }
@@ -98,7 +135,6 @@ const GameSession: React.FC = () => {
     try {
       await gameService.endSession(session.gameId, session.id, winnerId);
       
-      // Send WebSocket update
       ws?.send(JSON.stringify({
         type: 'game_status_update',
         gameId: session.id,
@@ -130,7 +166,8 @@ const GameSession: React.FC = () => {
   }
 
   const activePlayer = session.players[activePlayerIndex];
-  const isCurrentPlayerActive = activePlayer?.player.id === user?.id;
+  const currentPlayerInGame = session.players.find(p => p.player.id === user?.id);
+  const isCurrentPlayerActive = user?.id === activePlayer?.player.id;
 
   return (
     <div className="p-4">
@@ -216,11 +253,7 @@ const GameSession: React.FC = () => {
               </div>
             )}
             <DartBoard 
-              onScoreSelect={(score) => {
-                if (isCurrentPlayerActive) {
-                  handleScoreSubmit(score);
-                }
-              }}
+              onScoreSelect={handleScoreSubmit}
             />
           </div>
         </div>

@@ -124,4 +124,11 @@ export interface PlayerStats {
   accuracy: number;
   lastScore: number;
   score: number;
+}
+
+export interface ScoreResponse {
+  score: Score;
+  session: GameSession;
+  currentPlayerId: string;
+  isWinner: boolean;
 } 
