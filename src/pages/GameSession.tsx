@@ -21,6 +21,7 @@ const GameSession: React.FC = () => {
   const [session, setSession] = useState<GameSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [infoMessage, setInfoMessage] = useState<string>('');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [activePlayerIndex, setActivePlayerIndex] = useState<number>(() => {
     const saved = localStorage.getItem(`activePlayer_${id}`);
@@ -179,6 +180,9 @@ const GameSession: React.FC = () => {
       });
 
       if (data.score) {
+        // Calculer le nouveau score après ce lancer
+        const newRemainingScore = currentPlayer.currentScore - score;
+
         setSession((prev: GameSession | null) => {
           if (!prev) return prev;
           return {
@@ -188,7 +192,7 @@ const GameSession: React.FC = () => {
                 return {
                   ...p,
                   scores: [...p.scores, data.score],
-                  currentScore: p.currentScore - score,
+                  currentScore: newRemainingScore,
                 };
               }
               return p;
@@ -196,12 +200,25 @@ const GameSession: React.FC = () => {
           };
         });
 
+        // Si le joueur a gagné (score = 0)
+        if (newRemainingScore === 0) {
+          handleEndGame(currentPlayer.player.id);
+          return;
+        }
+
         // Passer au joueur suivant
         const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
         setActivePlayerIndex(nextPlayerIndex);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding score:", error);
+      if (error.response?.data?.message === 'Le dernier lancer doit être un double pour finir la partie') {
+        setInfoMessage('💡 Règle du jeu : Pour gagner, vous devez finir sur un double ! Par exemple : double 8 pour 16 points.');
+        setTimeout(() => setInfoMessage(''), 5000);
+        // On passe au joueur suivant car le joueur n'a pas réussi à finir sur un double
+        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+        setActivePlayerIndex(nextPlayerIndex);
+      }
     }
   };
 
@@ -250,6 +267,21 @@ const GameSession: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Message informatif */}
+      {infoMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-blue-900 text-[var(--text-primary)] px-6 py-3 rounded-lg shadow-lg border border-[var(--neon-primary)] relative">
+            {infoMessage}
+            <button
+              onClick={() => setInfoMessage('')}
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--glass-bg)] border border-[var(--neon-primary)] flex items-center justify-center hover:bg-[var(--glass-bg-hover)]"
+            >
+              <XCircleIcon className="w-4 h-4 text-[var(--text-primary)]" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Titre de la session */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-[var(--text-primary)]">

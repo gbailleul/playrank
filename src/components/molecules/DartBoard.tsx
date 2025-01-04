@@ -74,7 +74,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
 
   // Rayons des différentes zones (en pourcentage du rayon total)
   const doubleRing = radius * 0.88;  // Anneau extérieur (double)
-  const outerSingle = radius * 0.85; // Limite extérieure de la zone simple
+  const outerSingle = radius * 0.80; // Limite extérieure de la zone simple - Réduit de 0.85 à 0.80
   const tripleRing = radius * 0.55;  // Anneau triple
   const innerSingle = radius * 0.45; // Limite intérieure de la zone simple
   const bullOuter = radius * 0.16;   // Bull extérieur (25 points)
