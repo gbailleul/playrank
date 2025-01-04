@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 
 /**
  * Props pour le composant DartBoard
- * @param onScoreSelect Callback appelé quand un score est sélectionné, avec le score et son multiplicateur
+ * @param onScoreSelect Callback appelé quand un score est sélectionné
  */
 interface DartBoardProps {
-  onScoreSelect: (score: number, multiplier: number) => void;
+  onScoreSelect: (score: number) => void;
 }
 
 interface DartHit {
@@ -56,8 +56,14 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
     // Si on a 3 fléchettes, on calcule le score total
     if (newHits.length === 3) {
       const totalScore = newHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
-      onScoreSelect(totalScore, 1);
+      // On ne valide pas automatiquement, on attend le clic sur le bouton
     }
+  };
+
+  const handleValidate = () => {
+    const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
+    onScoreSelect(totalScore);
+    setDartHits([]);
   };
 
   // Les sections de score sur la cible, dans l'ordre horaire en partant du haut (20)
@@ -204,24 +210,6 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
           
           {/* Sections numérotées */}
           {sections.map((score, index) => createSection(index, score))}
-
-          {/* Affichage des impacts */}
-          {dartHits.map((hit, index) => (
-            <g key={index}>
-              <circle
-                cx={hit.x}
-                cy={hit.y}
-                r={4}
-                className="fill-white stroke-black stroke-1"
-              />
-              <circle
-                cx={hit.x}
-                cy={hit.y}
-                r={6}
-                className="fill-none stroke-white stroke-1 opacity-50"
-              />
-            </g>
-          ))}
           
           {/* Single bull (25 points) - Dessiné en premier car plus grand */}
           <circle
@@ -248,6 +236,26 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
             }`}
             onClick={(e) => handleHit(50, 1, e)}
           />
+
+          {/* Affichage des impacts */}
+          {dartHits.map((hit, index) => (
+            <g key={index}>
+              <circle
+                cx={hit.x}
+                cy={hit.y}
+                r={4}
+                className="fill-white stroke-black stroke-1"
+                style={{ zIndex: 10 }}
+              />
+              <circle
+                cx={hit.x}
+                cy={hit.y}
+                r={6}
+                className="fill-none stroke-white stroke-1 opacity-50"
+                style={{ zIndex: 10 }}
+              />
+            </g>
+          ))}
         </svg>
 
         {/* Indicateur de fléchettes avec scores */}
@@ -298,11 +306,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         {dartHits.length === 3 && (
           <div className="mt-4 text-center">
             <button
-              onClick={() => {
-                const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
-                onScoreSelect(totalScore, 1);
-                setDartHits([]);
-              }}
+              onClick={handleValidate}
               className="game-button"
             >
               Valider le score

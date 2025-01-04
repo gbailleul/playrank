@@ -216,21 +216,12 @@ const GameSession: React.FC = () => {
               </div>
             )}
             <DartBoard 
-              onScoreSelect={(score) => isCurrentPlayerActive ? setSelectedScore(score) : null}
+              onScoreSelect={(score) => {
+                if (isCurrentPlayerActive) {
+                  handleScoreSubmit(score);
+                }
+              }}
             />
-            {selectedScore !== null && isCurrentPlayerActive && (
-              <div className="mt-4 text-center">
-                <div className="text-lg font-semibold text-[var(--neon-primary)]">
-                  Score sélectionné: {selectedScore}
-                </div>
-                <button
-                  onClick={() => handleScoreSubmit(selectedScore)}
-                  className="game-button mt-2"
-                >
-                  Valider le score
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
