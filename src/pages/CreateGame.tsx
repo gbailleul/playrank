@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import type { CreateGameDto, User } from '../types';
 import { gameService, auth } from '../api/services';
 import { useAuth } from '../contexts/AuthContext';
-import DartBoard from '../components/atoms/DartBoard';
+
+type DartGameVariant = '501' | '301' | 'Cricket' | 'Around the Clock';
 
 const CreateGame: React.FC = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const [gameVariant, setGameVariant] = useState<DartGameVariant>('501');
   const [formData, setFormData] = useState<CreateGameDto>({
     name: '',
     description: '',
@@ -15,6 +17,7 @@ const CreateGame: React.FC = () => {
     maxScore: 501,
     minPlayers: 2,
     maxPlayers: 4,
+    variant: '501'
   });
   const [error, setError] = useState<string | null>(null);
   const [allPlayers, setAllPlayers] = useState<User[]>([]);
@@ -25,11 +28,34 @@ const CreateGame: React.FC = () => {
   // Calculer le nombre total de joueurs (incluant le créateur)
   const totalPlayers = selectedPlayers.length + 1;
 
+  const handleVariantChange = (variant: DartGameVariant) => {
+    setGameVariant(variant);
+    let newMaxScore = 501;
+    switch (variant) {
+      case '501':
+        newMaxScore = 501;
+        break;
+      case '301':
+        newMaxScore = 301;
+        break;
+      case 'Cricket':
+        newMaxScore = 0;
+        break;
+      case 'Around the Clock':
+        newMaxScore = 20;
+        break;
+    }
+    setFormData(prev => ({
+      ...prev,
+      maxScore: newMaxScore,
+      variant: variant
+    }));
+  };
+
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
         const { data } = await auth.getAllPlayers();
-        // Filter out current user and inactive/banned users
         const availablePlayers = data.filter(
           player => 
             player.id !== currentUser?.id && 
@@ -39,7 +65,7 @@ const CreateGame: React.FC = () => {
         setAllPlayers(availablePlayers);
       } catch (err) {
         console.error('Error fetching players:', err);
-        setError('Échec de la chargement des joueurs');
+        setError('Échec du chargement des joueurs');
       } finally {
         setLoading(false);
       }
@@ -116,8 +142,8 @@ const CreateGame: React.FC = () => {
   return (
     <div className="p-6 bg-[var(--bg-primary)] min-h-screen">
       <div className="max-w-2xl mx-auto">
-        <h1 className="game-title text-3xl mb-2">Nouvelle partie de fléchettes</h1>
-        <p className="text-[var(--text-secondary)] mb-6">Sélectionnez vos adversaires pour commencer</p>
+        <h1 className="game-title text-3xl mb-2">NOUVELLE PARTIE DE FLÉCHETTES</h1>
+        <p className="text-[var(--text-secondary)] mb-6">Configurez votre partie et sélectionnez vos adversaires</p>
 
         {error && (
           <div className="bg-red-500/10 text-red-500 p-3 rounded-lg backdrop-blur-sm border border-red-500/20 mb-4">
@@ -125,92 +151,123 @@ const CreateGame: React.FC = () => {
           </div>
         )}
 
-        <div className="game-card">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="game-title text-lg">
-                Sélectionnez vos adversaires ({totalPlayers}/4)
-              </h2>
-
-              {/* Search input */}
-              <div className="relative z-50">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Rechercher un joueur..."
-                  className="game-input w-full"
-                  aria-label="Rechercher un joueur"
-                />
-                {searchTerm && filteredPlayers.length > 0 && (
-                  <div className="absolute z-50 w-full mt-2 game-card max-h-60 overflow-auto">
-                    {filteredPlayers.map(player => (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => handleAddPlayer(player)}
-                        className="w-full p-3 text-left hover:bg-[var(--glass-bg)] flex items-center space-x-3 
-                          text-[var(--text-primary)] transition-all duration-[var(--animation-speed-normal)]
-                          hover:pl-4 group"
-                        disabled={selectedPlayers.length >= 3}
-                      >
-                        <div className="w-8 h-8 flex items-center justify-center border border-[var(--neon-primary)] rounded-full
-                          bg-[var(--glass-bg)] backdrop-blur-sm">
-                          {player.firstName[0]}
-                        </div>
-                        <span className="transition-colors duration-[var(--animation-speed-normal)] 
-                          group-hover:text-[var(--neon-primary)]">
-                          {player.firstName} {player.lastName}
-                        </span>
-                      </button>
-                    ))}
+        <div className="game-card p-6 space-y-8">
+          {/* Game Type Selection */}
+          <div className="space-y-4">
+            <h2 className="game-title text-xl">TYPE DE JEU</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {(['501', '301', 'Cricket', 'Around the Clock'] as DartGameVariant[]).map((variant) => (
+                <button
+                  key={variant}
+                  type="button"
+                  onClick={() => handleVariantChange(variant)}
+                  className={`game-button ${gameVariant === variant ? '' : 'opacity-50'}`}
+                >
+                  <div className="text-lg font-semibold">{variant}</div>
+                  <div className="text-sm mt-1">
+                    {variant === '501' || variant === '301' 
+                      ? 'Premier à zéro'
+                      : variant === 'Cricket' 
+                      ? 'Fermez les numéros et marquez des points'
+                      : 'Touchez les numéros dans l\'ordre'}
                   </div>
-                )}
-              </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
-              {/* Selected players list */}
-              <div className="space-y-3 relative z-0">
-                {selectedPlayers.map((player, index) => (
-                  <div
-                    key={player.id}
-                    className="game-card flex items-center justify-between animate-slideIn"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <div className="flex items-center space-x-3">
+          {/* Player Selection */}
+          <div className="space-y-4">
+            <h2 className="game-title text-xl">
+              SÉLECTIONNEZ VOS ADVERSAIRES ({totalPlayers}/4)
+            </h2>
+            <div className="relative z-50">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Rechercher un joueur..."
+                className="game-input w-full"
+                aria-label="Rechercher un joueur"
+              />
+              {searchTerm && filteredPlayers.length > 0 && (
+                <div className="absolute z-50 w-full mt-2 game-card max-h-60 overflow-auto">
+                  {filteredPlayers.map(player => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => handleAddPlayer(player)}
+                      className="w-full p-3 text-left hover:bg-[var(--glass-bg)] flex items-center space-x-3 
+                        text-[var(--text-primary)] transition-all duration-[var(--animation-speed-normal)]
+                        hover:pl-4 group"
+                      disabled={selectedPlayers.length >= 3}
+                    >
                       <div className="w-8 h-8 flex items-center justify-center border border-[var(--neon-primary)] rounded-full
                         bg-[var(--glass-bg)] backdrop-blur-sm">
                         {player.firstName[0]}
                       </div>
-                      <span className="text-[var(--text-primary)]">
+                      <span className="transition-colors duration-[var(--animation-speed-normal)] 
+                        group-hover:text-[var(--neon-primary)]">
                         {player.firstName} {player.lastName}
                       </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePlayer(player)}
-                      className="text-[var(--neon-accent)] hover:text-[var(--text-primary)] transition-colors"
-                      aria-label={`Retirer ${player.firstName} ${player.lastName}`}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
                     </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <button
-              type="submit"
-              className={`
-                game-button w-full text-lg
-                ${selectedPlayers.length < 1 && 'opacity-50 cursor-not-allowed'}
-              `}
-              disabled={selectedPlayers.length < 1}
-            >
-              Commencer la partie
-            </button>
-          </form>
+            {/* Selected Players List */}
+            <div className="space-y-3">
+              {selectedPlayers.map((player, index) => (
+                <div
+                  key={player.id}
+                  className="game-card p-3 flex items-center justify-between animate-slideIn"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 flex items-center justify-center border border-[var(--neon-primary)] rounded-full
+                      bg-[var(--glass-bg)] backdrop-blur-sm">
+                      {player.firstName[0]}
+                    </div>
+                    <span className="text-[var(--text-primary)]">
+                      {player.firstName} {player.lastName}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePlayer(player.id)}
+                    className="text-[var(--neon-accent)] hover:text-[var(--text-primary)] transition-colors"
+                    aria-label={`Retirer ${player.firstName} ${player.lastName}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Optional Game Name */}
+          <div className="space-y-4">
+            <h2 className="game-title text-xl">NOM DE LA PARTIE (OPTIONNEL)</h2>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Ex: Tournoi du vendredi"
+              className="game-input w-full"
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            onClick={handleSubmit}
+            className={`game-button w-full text-lg py-3 ${selectedPlayers.length < 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={selectedPlayers.length < 1 || loading}
+          >
+            {loading ? 'Création...' : 'Commencer la partie'}
+          </button>
         </div>
       </div>
     </div>

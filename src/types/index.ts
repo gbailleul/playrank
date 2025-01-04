@@ -58,6 +58,7 @@ export interface CreateGameDto {
   maxScore: number;
   minPlayers: number;
   maxPlayers: number;
+  variant?: string;
 }
 
 export interface GameSession {
