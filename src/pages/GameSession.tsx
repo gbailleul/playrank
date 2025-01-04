@@ -136,23 +136,13 @@ const GameSession: React.FC = () => {
     <div className="p-4">
       <div className="game-card p-6">
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl text-[var(--text-secondary)] opacity-75">
-                {session.game?.name || 'Partie de fléchettes'}
-              </h1>
-              {!isCurrentPlayerActive && (
-                <div className="active-player-indicator text-2xl font-bold text-[var(--neon-primary)]">
-                  Au tour de {activePlayer?.player.username}
-                </div>
-              )}
-            </div>
-            <p className="text-[var(--text-secondary)]">{session.status}</p>
-          </div>
+          <h1 className="text-xl text-[var(--text-secondary)] opacity-75">
+            {session.game?.name || 'Partie de fléchettes'}
+          </h1>
           {session.status === 'IN_PROGRESS' && (
             <button
               onClick={() => session.players[0] && handleEndGame(session.players[0].player.id)}
-              className="game-button-secondary flex items-center"
+              className="game-button-option flex items-center hover:text-[var(--neon-accent)]"
             >
               <XCircleIcon className="w-5 h-5 mr-2" />
               Terminer la partie
@@ -220,6 +210,11 @@ const GameSession: React.FC = () => {
 
           {/* Cible de fléchettes */}
           <div className="flex flex-col items-center">
+            {!isCurrentPlayerActive && (
+              <div className="active-player-indicator text-2xl font-bold mb-6">
+                Au tour de {activePlayer?.player.username}
+              </div>
+            )}
             <DartBoard 
               onScoreSelect={(score) => isCurrentPlayerActive ? setSelectedScore(score) : null}
             />

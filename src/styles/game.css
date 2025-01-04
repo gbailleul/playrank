@@ -203,24 +203,36 @@ body {
 }
 
 .active-player-indicator {
-  animation: pulse-glow 2s ease-in-out infinite;
-  position: relative;
+  color: var(--neon-primary);
+  text-shadow: 0 0 10px var(--neon-primary);
+  animation: neonFlicker 4s infinite;
 }
 
-.active-player-indicator::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  animation: shimmer 2s infinite;
+@keyframes neonFlicker {
+  0%, 100% { 
+    opacity: 1;
+    text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+  }
+  85% { 
+    opacity: 1;
+    text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+  }
+  87% { 
+    opacity: 0.8;
+    text-shadow: 0 0 5px var(--neon-primary);
+  }
+  89% { 
+    opacity: 1;
+    text-shadow: 0 0 15px var(--neon-primary), 0 0 25px var(--neon-primary);
+  }
+  92% {
+    opacity: 0.9;
+    text-shadow: 0 0 7px var(--neon-primary);
+  }
+  95% { 
+    opacity: 1;
+    text-shadow: 0 0 12px var(--neon-primary), 0 0 20px var(--neon-primary);
+  }
 }
 
 /* Option Buttons (for selections) */
