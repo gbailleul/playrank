@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import type { GameSession, PlayerGame, Score } from "../types/index";
-import { gameService } from "../api/services";
+import type { GameSession, PlayerGame, Score, Game } from "../types/index";
+import { GameType } from "../types/index";
 import DartBoard from "../components/molecules/DartBoard";
+import { gameService } from "../api/services";
 import { XCircleIcon } from '@heroicons/react/24/outline';
 
 interface PlayerScore {
@@ -31,16 +32,33 @@ const GameSession: React.FC = () => {
       const { data } = await gameService.getSession(id);
       const gameSession = data.sessions?.[data.sessions.length - 1];
       if (gameSession) {
-        setSession(gameSession);
+        // Ajouter la référence au jeu dans la session
+        const sessionWithGame = {
+          ...gameSession,
+          game: {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            gameType: data.gameType,
+            maxScore: data.maxScore,
+            minPlayers: data.minPlayers,
+            maxPlayers: data.maxPlayers,
+            creatorId: data.creatorId,
+            variant: data.variant,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt
+          }
+        };
+        setSession(sessionWithGame);
 
         // Déterminer l'ordre initial des joueurs si aucun score n'existe
-        if (gameSession.players.every((p: PlayerGame) => !p.scores?.length)) {
+        if (sessionWithGame.players.every((p: PlayerGame) => !p.scores?.length)) {
           setActivePlayerIndex(0);
           return;
         }
 
         // Trouver le dernier joueur qui a joué
-        const playerScores = gameSession.players.map((p: PlayerGame, index: number) => ({
+        const playerScores = sessionWithGame.players.map((p: PlayerGame, index: number) => ({
           index,
           playerId: p.player.id,
           username: p.player.username,
@@ -52,7 +70,7 @@ const GameSession: React.FC = () => {
 
         // Le joueur avec le moins de scores doit jouer
         const minScores = Math.min(...playerScores.map((p: PlayerGame) => p.scores?.length || 0));
-        const nextPlayerIndex = gameSession.players.findIndex(
+        const nextPlayerIndex = sessionWithGame.players.findIndex(
           (p: PlayerGame) => (p.scores?.length || 0) === minScores
         );
 
@@ -155,50 +173,46 @@ const GameSession: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--neon-primary)] border-t-transparent"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-[var(--neon-primary)]"></div>
       </div>
     );
   }
 
-  if (!session) {
+  if (error || !session || !session.game) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <div className="game-card p-8 text-center">
-          <div className="text-[var(--neon-accent)]">Session de jeu introuvable</div>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-xl text-[var(--text-primary)] mb-4">
+          {error || "Impossible de charger la session de jeu"}
         </div>
+        <Link to="/games" className="text-[var(--neon-primary)] hover:underline">
+          Retour aux jeux
+        </Link>
       </div>
     );
   }
 
   const activePlayer = session.players[activePlayerIndex];
   const currentPlayerInGame = session.players.find(p => p.player.id === user?.id);
-  const isCurrentPlayerActive = user?.id === activePlayer?.player.id;
+  const isCurrentPlayerActive = session?.players[activePlayerIndex]?.player.id === user?.id;
 
   return (
-    <div className="p-4">
-      <div className="game-card p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl text-[var(--text-secondary)] opacity-75">
-            {session.game?.name || 'Partie de fléchettes'}
-          </h1>
-          {session.status === 'IN_PROGRESS' && (
-            <button
-              onClick={() => session.players[0] && handleEndGame(session.players[0].player.id)}
-              className="game-button-option flex items-center hover:text-[var(--neon-accent)]"
-            >
-              <XCircleIcon className="w-5 h-5 mr-2" />
-              Terminer la partie
-            </button>
-          )}
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      {/* Titre de la session */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          {session.game.name}
+        </h1>
+        <Link
+          to="/games"
+          className="px-4 py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)]"
+        >
+          Retour aux jeux
+        </Link>
+      </div>
 
-        {error && (
-          <div className="bg-red-500 text-white p-3 rounded-md text-sm mb-6">
-            {error}
-          </div>
-        )}
-
+      {/* Contenu principal */}
+      <div className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Tableau des scores */}
           <div className="space-y-4">
@@ -219,7 +233,7 @@ const GameSession: React.FC = () => {
                     </span>
                   </div>
                   <span className="text-2xl font-bold text-[var(--neon-primary)]">
-                    {(session.game?.maxScore || 501) - playerGame.currentScore}
+                    {playerGame.currentScore}
                   </span>
                 </div>
 
@@ -252,16 +266,18 @@ const GameSession: React.FC = () => {
           </div>
 
           {/* Cible de fléchettes */}
-          <div className="flex flex-col items-center">
-            {!isCurrentPlayerActive && (
-              <div className="active-player-indicator text-2xl font-bold mb-6">
-                Au tour de {activePlayer?.player.username}
-              </div>
-            )}
-            <DartBoard 
-              onScoreSelect={handleScoreSelect}
-            />
-          </div>
+          {session.game.gameType === 'DARTS' && (
+            <div className="flex flex-col items-center">
+              {!isCurrentPlayerActive && (
+                <div className="active-player-indicator text-2xl font-bold mb-6">
+                  Au tour de {activePlayer?.player.username}
+                </div>
+              )}
+              <DartBoard 
+                onScoreSelect={handleScoreSelect}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

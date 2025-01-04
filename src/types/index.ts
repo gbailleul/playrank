@@ -1,4 +1,5 @@
 export type GameType = 'DARTS' | 'BILLIARDS';
+export type DartVariant = 'FIVE_HUNDRED_ONE' | 'THREE_HUNDRED_ONE' | 'CRICKET' | 'AROUND_THE_CLOCK';
 
 export interface User {
   id: string;
@@ -46,6 +47,7 @@ export interface Game {
   minPlayers: number;
   maxPlayers: number;
   creatorId: string;
+  variant?: DartVariant;
   sessions?: GameSession[];
   createdAt: string;
   updatedAt: string;
