@@ -5,6 +5,14 @@ import { gameService, auth } from '../api/services';
 import { useAuth } from '../contexts/AuthContext';
 
 type DartGameVariant = '501' | '301' | 'Cricket' | 'Around the Clock';
+type DartVariantBackend = 'FIVE_HUNDRED_ONE' | 'THREE_HUNDRED_ONE' | 'CRICKET' | 'AROUND_THE_CLOCK';
+
+const variantMapping: Record<DartGameVariant, DartVariantBackend> = {
+  '501': 'FIVE_HUNDRED_ONE',
+  '301': 'THREE_HUNDRED_ONE',
+  'Cricket': 'CRICKET',
+  'Around the Clock': 'AROUND_THE_CLOCK'
+};
 
 const CreateGame: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +25,7 @@ const CreateGame: React.FC = () => {
     maxScore: 501,
     minPlayers: 2,
     maxPlayers: 4,
-    variant: '501'
+    variant: 'FIVE_HUNDRED_ONE'
   });
   const [error, setError] = useState<string | null>(null);
   const [allPlayers, setAllPlayers] = useState<User[]>([]);
@@ -48,7 +56,7 @@ const CreateGame: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       maxScore: newMaxScore,
-      variant: variant
+      variant: variantMapping[variant]
     }));
   };
 
