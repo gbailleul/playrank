@@ -161,10 +161,12 @@ const CreateGame: React.FC = () => {
                   key={variant}
                   type="button"
                   onClick={() => handleVariantChange(variant)}
-                  className={`game-button ${gameVariant === variant ? '' : 'opacity-50'}`}
+                  className={`game-button-option ${
+                    gameVariant === variant ? 'active' : ''
+                  }`}
                 >
                   <div className="text-lg font-semibold">{variant}</div>
-                  <div className="text-sm mt-1">
+                  <div className="text-sm mt-1 text-[var(--text-secondary)]">
                     {variant === '501' || variant === '301' 
                       ? 'Premier à zéro'
                       : variant === 'Cricket' 
