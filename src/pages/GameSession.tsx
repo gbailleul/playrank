@@ -22,7 +22,17 @@ const GameSession: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [activePlayerIndex, setActivePlayerIndex] = useState<number>(0);
+  const [activePlayerIndex, setActivePlayerIndex] = useState<number>(() => {
+    const saved = localStorage.getItem(`activePlayer_${id}`);
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // Sauvegarder l'index du joueur actif dans le localStorage
+  useEffect(() => {
+    if (id) {
+      localStorage.setItem(`activePlayer_${id}`, activePlayerIndex.toString());
+    }
+  }, [activePlayerIndex, id]);
 
   // Fetch game session data
   const fetchSession = useCallback(async () => {
@@ -51,30 +61,32 @@ const GameSession: React.FC = () => {
         };
         setSession(sessionWithGame);
 
-        // Déterminer l'ordre initial des joueurs si aucun score n'existe
-        if (sessionWithGame.players.every((p: PlayerGame) => !p.scores?.length)) {
-          setActivePlayerIndex(0);
-          return;
+        // Déterminer l'ordre initial des joueurs uniquement si aucune donnée n'existe dans le localStorage
+        if (!localStorage.getItem(`activePlayer_${id}`)) {
+          if (sessionWithGame.players.every((p: PlayerGame) => !p.scores?.length)) {
+            setActivePlayerIndex(0);
+            return;
+          }
+
+          // Trouver le dernier joueur qui a joué
+          const playerScores = sessionWithGame.players.map((p: PlayerGame, index: number) => ({
+            index,
+            playerId: p.player.id,
+            username: p.player.username,
+            scoresCount: p.scores?.length || 0
+          }));
+
+          // Trier par nombre de scores (décroissant)
+          playerScores.sort((a: PlayerScore, b: PlayerScore) => b.scoresCount - a.scoresCount);
+
+          // Le joueur avec le moins de scores doit jouer
+          const minScores = Math.min(...playerScores.map((p: PlayerGame) => p.scores?.length || 0));
+          const nextPlayerIndex = sessionWithGame.players.findIndex(
+            (p: PlayerGame) => (p.scores?.length || 0) === minScores
+          );
+
+          setActivePlayerIndex(nextPlayerIndex);
         }
-
-        // Trouver le dernier joueur qui a joué
-        const playerScores = sessionWithGame.players.map((p: PlayerGame, index: number) => ({
-          index,
-          playerId: p.player.id,
-          username: p.player.username,
-          scoresCount: p.scores?.length || 0
-        }));
-
-        // Trier par nombre de scores (décroissant)
-        playerScores.sort((a: PlayerScore, b: PlayerScore) => b.scoresCount - a.scoresCount);
-
-        // Le joueur avec le moins de scores doit jouer
-        const minScores = Math.min(...playerScores.map((p: PlayerGame) => p.scores?.length || 0));
-        const nextPlayerIndex = sessionWithGame.players.findIndex(
-          (p: PlayerGame) => (p.scores?.length || 0) === minScores
-        );
-
-        setActivePlayerIndex(nextPlayerIndex);
       }
     } catch (err) {
       setError('Failed to load game session');
@@ -119,11 +131,51 @@ const GameSession: React.FC = () => {
   const handleScoreSelect = async (score: number) => {
     if (!session) return;
 
+    const currentPlayer = session.players[activePlayerIndex];
+    const remainingScore = currentPlayer.currentScore - score;
+
+    // Si le score dépasse, on envoie un score de 0
+    if (remainingScore < 0) {
+      try {
+        const { data } = await gameService.addScore(session.gameId, session.id, {
+          playerId: currentPlayer.player.id,
+          points: 0,
+          turnNumber: currentPlayer.scores?.length || 0
+        });
+
+        if (data.score) {
+          setSession((prev: GameSession | null) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              players: prev.players.map((p: PlayerGame) => {
+                if (p.id === currentPlayer.id) {
+                  return {
+                    ...p,
+                    scores: [...p.scores, data.score],
+                  };
+                }
+                return p;
+              }),
+            };
+          });
+
+          // Passer au joueur suivant
+          const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+          setActivePlayerIndex(nextPlayerIndex);
+        }
+      } catch (error) {
+        console.error("Error adding score:", error);
+      }
+      return;
+    }
+
+    // Score normal
     try {
       const { data } = await gameService.addScore(session.gameId, session.id, {
-        playerId: session.players[activePlayerIndex].player.id,
+        playerId: currentPlayer.player.id,
         points: score,
-        turnNumber: session.players[activePlayerIndex].scores?.length || 0
+        turnNumber: currentPlayer.scores?.length || 0
       });
 
       if (data.score) {
@@ -132,7 +184,7 @@ const GameSession: React.FC = () => {
           return {
             ...prev,
             players: prev.players.map((p: PlayerGame) => {
-              if (p.id === session.players[activePlayerIndex].id) {
+              if (p.id === currentPlayer.id) {
                 return {
                   ...p,
                   scores: [...p.scores, data.score],
@@ -268,11 +320,9 @@ const GameSession: React.FC = () => {
           {/* Cible de fléchettes */}
           {session.game.gameType === 'DARTS' && (
             <div className="flex flex-col items-center">
-              {!isCurrentPlayerActive && (
-                <div className="active-player-indicator text-2xl font-bold mb-6">
-                  Au tour de {activePlayer?.player.username}
-                </div>
-              )}
+              <div className="active-player-indicator text-2xl font-bold mb-6">
+                Au tour de {activePlayer?.player.username}
+              </div>
               <DartBoard 
                 onScoreSelect={handleScoreSelect}
               />
