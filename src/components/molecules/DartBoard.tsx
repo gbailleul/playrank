@@ -190,22 +190,40 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
     );
   };
 
+  // Affichage des impacts
+  const renderHits = () => {
+    return dartHits.filter(hit => !hit.isMiss).map((hit, index) => (
+      <g key={index}>
+        <circle
+          cx={hit.x}
+          cy={hit.y}
+          r={4}
+          className="fill-white stroke-black stroke-1"
+          style={{ zIndex: 10 }}
+        />
+        <circle
+          cx={hit.x}
+          cy={hit.y}
+          r={6}
+          className="fill-none stroke-white stroke-1 opacity-50"
+          style={{ zIndex: 10 }}
+        />
+      </g>
+    ));
+  };
+
   return (
     <div className={`relative inline-block ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
       {/* Zone de Miss */}
       <div 
-        className="absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair"
+        className={`absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
         onClick={(e) => {
-          if (disabled) return;
+          if (disabled || dartHits.length >= 3) return;
           const rect = e.currentTarget.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
           const newHit = { score: 0, multiplier: 1, x, y, isMiss: true };
-          const newHits = [...dartHits, newHit];
-          setDartHits(newHits);
-          if (newHits.length === 3) {
-            handleValidate();
-          }
+          setDartHits([...dartHits, newHit]);
         }}
       >
         <span className="absolute inset-0 flex items-center justify-center text-[var(--text-primary)] pointer-events-none">
@@ -246,26 +264,26 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
           {/* Sections numérotées */}
           {sections.map((score, index) => createSection(index, score))}
           
-          {/* Single bull (25 points) - Dessiné en premier car plus grand */}
+          {/* Single bull (25 points) */}
           <circle
             cx={center}
             cy={center}
             r={bullOuter}
             className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
-              dartHits.some(hit => hit.score === 25)
+              dartHits.some(hit => !hit.isMiss && hit.score === 25)
                 ? 'fill-[var(--neon-primary)] opacity-70'
                 : 'fill-[#1a1a1a]'
             }`}
             onClick={(e) => handleHit(25, 1, e)}
           />
           
-          {/* Double bull (50 points) - Dessiné en dernier pour être au-dessus */}
+          {/* Double bull (50 points) */}
           <circle
             cx={center}
             cy={center}
             r={bullInner}
             className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
-              dartHits.some(hit => hit.score === 50)
+              dartHits.some(hit => !hit.isMiss && hit.score === 50)
                 ? 'fill-[var(--neon-primary)] opacity-70'
                 : 'fill-[#cc0000]'
             }`}
@@ -273,24 +291,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
           />
 
           {/* Affichage des impacts */}
-          {dartHits.map((hit, index) => (
-            <g key={index}>
-              <circle
-                cx={hit.x}
-                cy={hit.y}
-                r={4}
-                className="fill-white stroke-black stroke-1"
-                style={{ zIndex: 10 }}
-              />
-              <circle
-                cx={hit.x}
-                cy={hit.y}
-                r={6}
-                className="fill-none stroke-white stroke-1 opacity-50"
-                style={{ zIndex: 10 }}
-              />
-            </g>
-          ))}
+          {renderHits()}
         </svg>
 
         {/* Indicateur de fléchettes avec scores */}
