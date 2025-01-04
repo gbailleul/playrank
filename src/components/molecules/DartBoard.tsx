@@ -15,6 +15,7 @@ interface DartHit {
   multiplier: number;
   x: number;
   y: number;
+  isMiss?: boolean;
 }
 
 /**
@@ -191,6 +192,37 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
 
   return (
     <div className={`relative inline-block ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+      {/* Zone de Miss */}
+      <div 
+        className="absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair"
+        onClick={(e) => {
+          if (disabled) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          const newHit = { score: 0, multiplier: 1, x, y, isMiss: true };
+          const newHits = [...dartHits, newHit];
+          setDartHits(newHits);
+          if (newHits.length === 3) {
+            handleValidate();
+          }
+        }}
+      >
+        <span className="absolute inset-0 flex items-center justify-center text-[var(--text-primary)] pointer-events-none">
+          Miss
+        </span>
+        {dartHits.filter(hit => hit.isMiss).map((hit, index) => (
+          <div
+            key={index}
+            className="absolute w-2 h-2 bg-[var(--neon-primary)] rounded-full transform -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${hit.x}%`,
+              top: `${hit.y}%`,
+            }}
+          />
+        ))}
+      </div>
+
       {disabled && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
           <div className="text-white text-xl font-bold">En attente de votre tour</div>
@@ -201,6 +233,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
           width={size}
           height={size}
           viewBox={`0 0 ${size} ${size}`}
+          className="cursor-crosshair"
         >
           {/* Cercle de fond */}
           <circle
