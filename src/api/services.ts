@@ -1,5 +1,6 @@
 import client from './client';
-import type { User, CreateGameDto, Game, Score, GameSession, ScoreResponse, DashboardResponse, LeaderboardResponse, UserStatistics } from '../types';
+import type { User, CreateGameDto, Game, ScoreResponse, DashboardResponse, LeaderboardResponse, UserStatistics } from '../types/index';
+import axios from 'axios';
 
 interface LoginResponse {
   user: User;
@@ -25,6 +26,8 @@ interface AddScoreData {
   points: number;
   turnNumber: number;
 }
+
+const API_URL = 'http://localhost:3000/api';
 
 export const auth = {
   login: async (email: string, password: string) => {
@@ -154,9 +157,7 @@ export const gameService = {
 };
 
 export const dashboardService = {
-  getDashboard: async () => {
-    return client.get<DashboardResponse>('/dashboard');
-  }
+  getDashboard: (page: number = 1) => client.get<DashboardResponse>(`/dashboard?page=${page}`),
 };
 
 export const leaderboardService = {

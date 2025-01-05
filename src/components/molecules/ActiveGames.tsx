@@ -5,9 +5,16 @@ import type { DashboardGame } from '../../types/index';
 
 interface ActiveGamesProps {
   games: DashboardGame[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+  onPageChange: (page: number) => void;
 }
 
-const ActiveGames: React.FC<ActiveGamesProps> = ({ games }) => {
+const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChange }) => {
   const formatTime = (date?: Date) => {
     if (!date) return '';
     return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -43,9 +50,14 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games }) => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-        Liste des parties
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+          Liste des parties
+        </h2>
+        <div className="text-sm text-[var(--text-secondary)]">
+          {pagination.totalItems} parties au total
+        </div>
+      </div>
       
       {games.length === 0 ? (
         <div className="text-center py-8">
@@ -114,6 +126,31 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games }) => {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onPageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
+                  className="px-3 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-50 hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  Précédent
+                </button>
+                <span className="text-[var(--text-secondary)]">
+                  Page {pagination.currentPage} sur {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => onPageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  className="px-3 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-50 hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

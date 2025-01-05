@@ -179,6 +179,12 @@ export interface DashboardGame {
 
 export interface DashboardResponse {
   games: DashboardGame[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
   globalStats: {
     averageAccuracy: number;
     averagePointsPerDart: number;

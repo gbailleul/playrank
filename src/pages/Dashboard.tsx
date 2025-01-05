@@ -11,24 +11,30 @@ import TopPlayers from '../components/molecules/TopPlayers';
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const { data } = await dashboardService.getDashboard();
-        setDashboardData(data);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Erreur lors du chargement des données');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchDashboardData = async (page: number) => {
+    try {
+      setIsLoading(true);
+      const { data } = await dashboardService.getDashboard(page);
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Erreur lors du chargement des données');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchDashboardData();
-  }, []);
+  useEffect(() => {
+    fetchDashboardData(currentPage);
+  }, [currentPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   if (isLoading) {
     return (
@@ -64,7 +70,7 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <Link 
               to="/games/new"
-              className="card group hover:shadow-lg transition-shadow duration-200"
+              className="dashboard-tile p-6 group hover:shadow-lg transition-shadow duration-200"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -87,7 +93,7 @@ const Dashboard: React.FC = () => {
 
             <Link 
               to="/leaderboard"
-              className="card group hover:shadow-lg transition-shadow duration-200"
+              className="dashboard-tile p-6 group hover:shadow-lg transition-shadow duration-200"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -109,10 +115,14 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Active Games Section - Full Width */}
+        {/* Games List Section */}
         {dashboardData?.games && (
           <div className="mb-8">
-            <ActiveGames games={dashboardData.games} />
+            <ActiveGames 
+              games={dashboardData.games} 
+              pagination={dashboardData.pagination}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
 
