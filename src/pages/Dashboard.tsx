@@ -1,9 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { dashboardService } from '../api/services';
+import type { DashboardResponse, DashboardGame } from '../types';
+import StatisticsCard from '../components/molecules/StatisticsCard';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const { data } = await dashboardService.getDashboard();
+        setDashboardData(data);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] bg-fixed p-6 flex items-center justify-center">
+        <div className="text-[var(--text-primary)]">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] bg-fixed p-6 flex items-center justify-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] bg-fixed p-6">
@@ -17,6 +55,13 @@ const Dashboard: React.FC = () => {
             Suivez vos scores et affrontez vos amis
           </p>
         </div>
+
+        {/* Statistics Section */}
+        {user?.statistics && (
+          <div className="mb-8">
+            <StatisticsCard statistics={user.statistics} />
+          </div>
+        )}
 
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -80,21 +125,42 @@ const Dashboard: React.FC = () => {
             </Link>
           </div>
 
-          <div className="flex flex-col items-center justify-center py-8 text-[var(--text-secondary)]">
-            <div className="icon-container mb-4">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+          {dashboardData?.games && dashboardData.games.length > 0 ? (
+            <div className="space-y-4">
+              {dashboardData.games.map((game: DashboardGame) => (
+                <div key={game.id} className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-secondary)] backdrop-blur-sm">
+                  <div>
+                    <h3 className="font-semibold text-[var(--text-primary)]">{game.name}</h3>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {game.players.length} joueurs • {game.gameType}
+                    </p>
+                  </div>
+                  <Link
+                    to={`/games/${game.id}`}
+                    className="btn-secondary"
+                  >
+                    Voir
+                  </Link>
+                </div>
+              ))}
             </div>
-            <p className="text-lg mb-2">Aucune partie récente</p>
-            <p className="text-sm mb-4">Commencez par créer votre première partie !</p>
-            <Link
-              to="/games/new"
-              className="btn-primary"
-            >
-              Créer une partie
-            </Link>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-[var(--text-secondary)]">
+              <div className="icon-container mb-4">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <p className="text-lg mb-2">Aucune partie récente</p>
+              <p className="text-sm mb-4">Commencez par créer votre première partie !</p>
+              <Link
+                to="/games/new"
+                className="btn-primary"
+              >
+                Créer une partie
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
