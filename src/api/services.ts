@@ -1,5 +1,5 @@
 import client from './client';
-import type { User, CreateGameDto, Game, Score, GameSession, ScoreResponse } from '../types';
+import type { User, CreateGameDto, Game, Score, GameSession, ScoreResponse, DashboardResponse, LeaderboardResponse, UserStatistics } from '../types';
 
 interface LoginResponse {
   user: User;
@@ -151,4 +151,22 @@ export const gameService = {
       winnerId
     });
   },
+};
+
+export const dashboardService = {
+  getDashboard: async () => {
+    return client.get<DashboardResponse>('/dashboard');
+  }
+};
+
+export const leaderboardService = {
+  getLeaderboard: async (gameType: string) => {
+    return client.get<LeaderboardResponse>(`/leaderboard/${gameType}`);
+  }
+};
+
+export const statisticsService = {
+  getUserStatistics: async (userId: string) => {
+    return client.get<UserStatistics>(`/users/${userId}/statistics`);
+  }
 }; 
