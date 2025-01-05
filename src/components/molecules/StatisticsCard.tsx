@@ -8,7 +8,7 @@ interface StatisticsCardProps {
 
 const StatisticsCard: React.FC<StatisticsCardProps> = ({ statistics, className = '' }) => {
   return (
-    <div className={`card ${className}`}>
+    <div className={`dashboard-tile p-6 ${className}`}>
       <h2 className="text-xl font-semibold mb-4 text-[var(--text-primary)]">
         Statistiques
       </h2>

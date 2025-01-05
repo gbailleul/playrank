@@ -27,6 +27,10 @@ export interface UserStatistics {
   winRate: number;
   averagePointsPerDart: number;
   accuracy: number;
+  highestScore: number;
+  totalDoubles: number;
+  totalTriples: number;
+  totalDartsThrown: number;
 }
 
 export interface User {
@@ -183,6 +187,16 @@ export interface DashboardResponse {
     totalDoubles: number;
     totalTriples: number;
   };
+  topPlayers: {
+    id: string;
+    username: string;
+    avatarUrl?: string;
+    statistics: {
+      gamesWon: number;
+      winRate: number;
+      averagePointsPerDart: number;
+    };
+  }[];
 }
 
 export interface LeaderboardEntry {

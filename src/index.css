@@ -14,6 +14,10 @@
   --error: #ef4444;
   --warning: #f59e0b;
   --bg-secondary: #1e293b;
+  --bg-hover: #2d3a4f;
+  --status-in-progress: #00ffff;
+  --status-completed: #ffd700;
+  --status-cancelled: #8b0000;
 }
 
 @layer base {
@@ -31,6 +35,12 @@
   /* Game card with glass effect */
   .game-card {
     @apply glass rounded-lg border border-white/10 shadow-lg;
+  }
+
+  /* Dashboard tile with reflection effect */
+  .dashboard-tile {
+    @apply rounded-lg bg-[var(--bg-secondary)] border border-white/10 shadow-lg backdrop-blur-sm hover:bg-[var(--bg-hover)] transition-all duration-200;
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(30, 41, 59, 0.7) 100%);
   }
 
   /* Navigation links */
