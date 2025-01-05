@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import CreateGame from './pages/CreateGame';
 import GameSession from './pages/GameSession';
+import Leaderboard from './pages/Leaderboard';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -82,6 +83,7 @@ const Router = () => {
         <Route path="test-connection" element={<TestConnection />} />
         <Route path="games/new" element={<CreateGame />} />
         <Route path="games/:id" element={<GameSession />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
       </Route>
 
       {/* Catch all route */}

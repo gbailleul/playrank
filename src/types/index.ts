@@ -1,6 +1,7 @@
 export enum GameType {
-  DARTS = 'DARTS',
-  BILLIARDS = 'BILLIARDS'
+  GAME_301 = 'GAME_301',
+  GAME_501 = 'GAME_501',
+  CRICKET = 'CRICKET'
 }
 
 export enum GameStatus {

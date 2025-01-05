@@ -1,6 +1,7 @@
 import client from './client';
 import type { User, CreateGameDto, Game, ScoreResponse, DashboardResponse, LeaderboardResponse, UserStatistics } from '../types/index';
-import axios from 'axios';
+import { GameType } from '../types/index';
+
 
 interface LoginResponse {
   user: User;
@@ -161,7 +162,7 @@ export const dashboardService = {
 };
 
 export const leaderboardService = {
-  getLeaderboard: async (gameType: string) => {
+  getLeaderboard: async (gameType: GameType) => {
     return client.get<LeaderboardResponse>(`/leaderboard/${gameType}`);
   }
 };
