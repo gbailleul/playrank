@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../api/services';
-import type { User, UserActivity } from '../types';
+import type { User, UserActivity } from '../types/index';
+import ProgressCharts from '../components/molecules/ProgressCharts';
 
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -186,6 +187,16 @@ const Profile = () => {
                 <p className="text-2xl font-bold mt-1">{user.statistics?.winRate || 0}%</p>
               </div>
             </div>
+          </div>
+
+          {/* Progress Charts */}
+          <div className="md:col-span-2">
+            {(() => {
+              if (!user?.playerGames || user.playerGames.length === 0) {
+                return null;
+              }
+              return <ProgressCharts playerGames={user.playerGames} />;
+            })()}
           </div>
 
           {/* Recent Activity */}

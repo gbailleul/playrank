@@ -17,6 +17,18 @@ export enum DartVariant {
   AROUND_THE_CLOCK = 'AROUND_THE_CLOCK'
 }
 
+export type UserRole = 'ADMIN' | 'PLAYER' | 'VIEWER';
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BANNED';
+
+export interface UserStatistics {
+  gamesCreated: number;
+  gamesPlayed: number;
+  gamesWon: number;
+  winRate: number;
+  averagePointsPerDart: number;
+  accuracy: number;
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -24,43 +36,20 @@ export interface User {
   username: string;
   email: string;
   avatarUrl?: string;
-  role: 'ADMIN' | 'PLAYER' | 'VIEWER';
-  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
+  role: UserRole;
+  status: UserStatus;
   statistics?: UserStatistics;
+  playerGames?: PlayerGame[];
   recentActivity?: UserActivity[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface UserStatistics {
-  id: string;
-  userId: string;
-  gamesPlayed: number;
-  gamesWon: number;
-  totalDartsThrown: number;
-  averageDartsPerGame: number;
-  highestScore: number;
-  totalDoubles: number;
-  totalTriples: number;
-  accuracy: number;
-  averagePointsPerDart: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface UserActivity {
   type: 'game_created' | 'game_played';
-  game: {
-    id: string;
-    name: string;
-    gameType: GameType;
-  };
-  result?: {
-    score: number;
-    rank?: number;
-    won: boolean;
-  };
+  game: GameInfo;
   timestamp: string;
+  result?: GameResult;
 }
 
 export interface Game {
@@ -103,23 +92,18 @@ export interface GameSession {
 
 export interface PlayerGame {
   id: string;
-  gameSessionId: string;
   playerId: string;
-  player: User;
-  currentScore: number;
+  gameSession: GameSession;
   scores: Score[];
   rank: number | null;
   joinedAt: string;
-  updatedAt: string;
 }
 
 export interface Score {
   id: string;
   points: number;
   turnNumber: number;
-  notes?: string;
   createdAt: string;
-  playerGame: PlayerGame;
 }
 
 export interface LoginDto {
@@ -218,4 +202,15 @@ export interface LeaderboardResponse {
   entries: LeaderboardEntry[];
   totalPlayers: number;
   userRank?: LeaderboardEntry;
+}
+
+export interface GameResult {
+  won: boolean;
+  rank?: number;
+}
+
+export interface GameInfo {
+  id: string;
+  name: string;
+  gameType: string;
 } 
