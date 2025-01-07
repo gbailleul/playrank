@@ -1,4 +1,4 @@
-import type { Game, CreateGameDto, AddScoreData, CricketScoreData } from '../types';
+import type { Game, CreateGameDto, AddScoreData, CricketScoreData } from '../types/index';
 import { dashboardService } from './dashboard';
 import client from './client';
 
@@ -16,7 +16,11 @@ export const gameService = {
   },
 
   getSession: (id: string) => {
-    return client.get<Game>(`/games/${id}`);
+    return client.get<Game>(`/games/${id}`, {
+      params: {
+        include: 'players.cricketScores,players.player,players.scores'
+      }
+    });
   },
 
   createGameSession: (gameId: string, data: { players: string[] }) => {
@@ -28,7 +32,10 @@ export const gameService = {
   },
 
   addCricketScore: (gameId: string, sessionId: string, data: CricketScoreData) => {
-    return client.post(`/games/${gameId}/sessions/${sessionId}/cricket-scores`, data);
+    return client.post(`/games/${gameId}/sessions/${sessionId}/scores`, {
+      ...data,
+      variant: 'CRICKET'
+    });
   },
 
   endSession: (gameId: string, sessionId: string, winnerId: string) => {

@@ -7,8 +7,8 @@ import DartBoard from "../components/molecules/DartBoard";
 import { gameService } from "../api/services";
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import VictoryModal from "../components/molecules/VictoryModal";
-import CricketBoard from '../components/CricketBoard';
-import { CricketGameState, CricketHit, PlayerCricketScores } from '../types/cricket';
+import CricketDartBoard from '../components/CricketDartBoard';
+import { CricketGameState, PlayerCricketScores, CricketTarget } from '../types/cricket';
 import CricketRules from '../components/CricketRules';
 
 interface ExtendedPlayerGame extends Omit<PlayerGame, 'cricketScores'> {
@@ -51,6 +51,7 @@ const GameSession: React.FC = () => {
     gameStatus: 'IN_PROGRESS'
   });
   const [showRules, setShowRules] = useState(false);
+  const [dartHits, setDartHits] = useState<number[]>([]);
 
   // Sauvegarder l'index du joueur actif dans le localStorage
   useEffect(() => {
@@ -96,8 +97,10 @@ const GameSession: React.FC = () => {
 
         // Si c'est une partie de cricket, initialiser le gameState
         if (data.variant === DartVariant.CRICKET) {
-          setGameState({
-            players: extendedSession.players.map(player => ({
+          console.log('Cricket session data:', extendedSession.players);
+          const initializedPlayers = extendedSession.players.map(player => {
+            console.log('Player cricket scores:', player.cricketScores);
+            return {
               id: player.playerId,
               username: player.player.username,
               scores: player.cricketScores?.scores || {
@@ -110,13 +113,18 @@ const GameSession: React.FC = () => {
                 25: { hits: 0, points: 0 }
               },
               totalPoints: Object.values(player.cricketScores?.scores || {}).reduce((sum, score) => sum + score.points, 0)
-            })),
+            };
+          });
+
+          setGameState({
+            players: initializedPlayers,
             currentPlayerIndex: activePlayerIndex,
             gameStatus: 'IN_PROGRESS'
           });
         }
       }
     } catch (err) {
+      console.error('Error fetching session:', err);
       setError('Failed to load game session');
     } finally {
       setLoading(false);
@@ -133,7 +141,7 @@ const GameSession: React.FC = () => {
     websocket.onopen = () => {
       websocket.send(JSON.stringify({
         type: 'join_game',
-        gameId: session.gameId,
+        gameId: session.game.id,
         playerId: user?.id
       }));
     };
@@ -180,10 +188,11 @@ const GameSession: React.FC = () => {
             return {
               ...prev,
               players: prev.players.map(p => {
-                if (p.id === currentPlayer.id) {
+                if (p.playerId === currentPlayer.playerId) {
                   return {
                     ...p,
-                    scores: [...p.scores, data.score],
+                    scores: [...(p.scores || []), data.score],
+                    currentScore: p.currentScore
                   };
                 }
                 return p;
@@ -218,11 +227,11 @@ const GameSession: React.FC = () => {
           return {
             ...prev,
             players: prev.players.map(p => {
-              if (p.id === currentPlayer.id) {
+              if (p.playerId === currentPlayer.playerId) {
                 return {
                   ...p,
-                  scores: [...p.scores, data.score],
-                  currentScore: remainingScore,
+                  scores: [...(p.scores || []), data.score],
+                  currentScore: remainingScore
                 };
               }
               return p;
@@ -292,69 +301,111 @@ const GameSession: React.FC = () => {
         turnNumber: currentPlayer.scores?.length || 0
       };
 
+      console.log('Sending score data:', scoreData);
       const { data } = await gameService.addCricketScore(session.game.id, session.id, scoreData);
+      console.log('Received response:', data);
 
       if (data.cricketScore) {
-        setSession(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            players: prev.players.map(p => {
-              if (p.id === currentPlayer.id) {
-                return {
-                  ...p,
-                  cricketScores: data.cricketScore
-                };
-              }
-              return p;
-            }),
-          };
-        });
+        // Get the current scores for all players
+        const defaultScores: PlayerCricketScores = {
+          15: { hits: 0, points: 0 },
+          16: { hits: 0, points: 0 },
+          17: { hits: 0, points: 0 },
+          18: { hits: 0, points: 0 },
+          19: { hits: 0, points: 0 },
+          20: { hits: 0, points: 0 },
+          25: { hits: 0, points: 0 }
+        };
+        
+        // Update the scores for the current player
+        const updatedScores = {
+          ...gameState.players.find(p => p.id === currentPlayer.playerId)?.scores || defaultScores,
+          [target]: {
+            hits: Math.min(
+              (gameState.players.find(p => p.id === currentPlayer.playerId)?.scores[target as CricketTarget]?.hits || 0) + data.cricketScore.currentThrow.hits,
+              3 // Maximum de 3 hits par cible
+            ),
+            points: (gameState.players.find(p => p.id === currentPlayer.playerId)?.scores[target as CricketTarget]?.points || 0) + data.cricketScore.currentThrow.points
+          }
+        };
 
-        // Update game state
+        // Update the game state
         setGameState(prev => {
           const updatedPlayers = prev.players.map(p => {
             if (p.id === currentPlayer.playerId) {
               return {
                 ...p,
-                scores: data.cricketScore.scores as PlayerCricketScores,
-                totalPoints: Object.values(data.cricketScore.scores as PlayerCricketScores)
-                  .reduce((sum, score) => sum + (score.points || 0), 0)
+                scores: updatedScores,
+                totalPoints: Object.values(updatedScores).reduce(
+                  (sum, score) => sum + score.points,
+                  0
+                )
               };
             }
             return p;
           });
 
-          // Check if the current player has won
-          const currentPlayerUpdated = updatedPlayers.find(p => p.id === currentPlayer.playerId);
-          const otherPlayers = updatedPlayers.filter(p => p.id !== currentPlayer.playerId);
-          
-          if (currentPlayerUpdated) {
-            const hasClosedAllTargets = Object.values(currentPlayerUpdated.scores)
-              .every(score => score.hits >= 3);
-            const hasHighestPoints = currentPlayerUpdated.totalPoints >= 
-              Math.max(...otherPlayers.map(p => p.totalPoints));
+          // Vérifier si le joueur a gagné
+          const currentPlayerScores = updatedScores;
+          const allTargetsClosed = Object.values(currentPlayerScores).every(score => score.hits >= 3);
+          const currentPlayerTotalPoints = Object.values(currentPlayerScores).reduce((sum, score) => sum + score.points, 0);
+          const otherPlayersTotalPoints = updatedPlayers
+            .filter(p => p.id !== currentPlayer.playerId)
+            .map(p => Object.values(p.scores).reduce((sum, score) => sum + score.points, 0));
+          const hasHighestScore = otherPlayersTotalPoints.every(points => points <= currentPlayerTotalPoints);
 
-            if (hasClosedAllTargets && hasHighestPoints) {
-              handleEndGame(currentPlayer.playerId);
-              return {
-                ...prev,
-                players: updatedPlayers,
-                gameStatus: 'COMPLETED' as const
-              };
-            }
+          if (allTargetsClosed && hasHighestScore) {
+            return {
+              ...prev,
+              players: updatedPlayers,
+              gameStatus: 'COMPLETED',
+              winner: currentPlayer.playerId
+            };
           }
-
-          // Move to next player
-          const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
-          setActivePlayerIndex(nextPlayerIndex);
 
           return {
             ...prev,
             players: updatedPlayers,
-            currentPlayerIndex: nextPlayerIndex
           };
         });
+
+        // Update the session
+        setSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            players: prev.players.map(p => {
+              if (p.playerId === currentPlayer.playerId) {
+                return {
+                  ...p,
+                  cricketScores: {
+                    ...p.cricketScores,
+                    scores: updatedScores
+                  }
+                };
+              }
+              return p;
+            }),
+            status: gameState.gameStatus === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
+            winnerId: gameState.winner
+          };
+        });
+
+        // Si c'est le troisième lancer ou si le jeu est terminé, passer au joueur suivant
+        if (dartHits.length === 2 || gameState.gameStatus === 'COMPLETED') {
+          const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+          setActivePlayerIndex(nextPlayerIndex);
+          setDartHits([]);
+
+          // Si le jeu est terminé, envoyer la requête pour terminer la session
+          if (gameState.gameStatus === 'COMPLETED' && gameState.winner) {
+            try {
+              await gameService.endSession(session.game.id, session.id, gameState.winner);
+            } catch (error) {
+              console.error('Error ending session:', error);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Error adding cricket score:", error);
@@ -362,24 +413,50 @@ const GameSession: React.FC = () => {
     }
   };
 
+  const handleTurnComplete = () => {
+    // Passer au joueur suivant
+    const nextPlayerIndex = (activePlayerIndex + 1) % session!.players.length;
+    setActivePlayerIndex(nextPlayerIndex);
+  };
+
   // Mettre à jour le gameState quand la session change
   useEffect(() => {
     if (session && session.game.variant === DartVariant.CRICKET) {
-      setGameState({
-        players: session.players.map(player => ({
+      console.log('Cricket session data:', session.players);
+      const defaultScores: PlayerCricketScores = {
+        15: { hits: 0, points: 0 },
+        16: { hits: 0, points: 0 },
+        17: { hits: 0, points: 0 },
+        18: { hits: 0, points: 0 },
+        19: { hits: 0, points: 0 },
+        20: { hits: 0, points: 0 },
+        25: { hits: 0, points: 0 }
+      };
+
+      const initializedPlayers = session.players.map(player => {
+        console.log('Player cricket scores:', player.cricketScores);
+        const scores = player.cricketScores?.scores
+          ? (typeof player.cricketScores.scores === 'string'
+              ? JSON.parse(player.cricketScores.scores)
+              : player.cricketScores.scores)
+          : defaultScores;
+
+        // Ensure all required targets exist
+        const validScores: PlayerCricketScores = {
+          ...defaultScores,
+          ...scores
+        };
+
+        return {
           id: player.playerId,
           username: player.player.username,
-          scores: player.cricketScores?.scores || {
-            15: { hits: 0, points: 0 },
-            16: { hits: 0, points: 0 },
-            17: { hits: 0, points: 0 },
-            18: { hits: 0, points: 0 },
-            19: { hits: 0, points: 0 },
-            20: { hits: 0, points: 0 },
-            25: { hits: 0, points: 0 }
-          },
-          totalPoints: Object.values(player.cricketScores?.scores || {}).reduce((sum, score) => sum + score.points, 0)
-        })),
+          scores: validScores,
+          totalPoints: Object.values(validScores).reduce((sum, score) => sum + score.points, 0)
+        };
+      });
+
+      setGameState({
+        players: initializedPlayers,
         currentPlayerIndex: activePlayerIndex,
         gameStatus: 'IN_PROGRESS'
       });
@@ -521,10 +598,11 @@ const GameSession: React.FC = () => {
           <div className="flex flex-col items-center">
             {/* Cible de fléchettes */}
             {session.game.gameType === GameType.DARTS && session.game.variant === DartVariant.CRICKET ? (
-              <CricketBoard
+              <CricketDartBoard
                 gameState={gameState}
                 onScoreClick={handleCricketScore}
                 currentPlayerId={activePlayer}
+                onTurnComplete={handleTurnComplete}
               />
             ) : (
               <div className="flex items-center justify-center">

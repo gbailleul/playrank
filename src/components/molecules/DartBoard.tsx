@@ -3,11 +3,9 @@ import React, { useState } from 'react';
 /**
  * Props pour le composant DartBoard
  * @param onScoreSelect Callback appelé quand un score est sélectionné
- * @param disabled Indique si la cible est désactivée
  */
 interface DartBoardProps {
   onScoreSelect: (score: number, isDouble: boolean) => void;
-  disabled?: boolean;
 }
 
 interface DartHit {
@@ -30,12 +28,11 @@ interface DartHit {
  * Les sections sont numérotées de 1 à 20 dans un ordre spécifique,
  * avec le 20 en haut et alternant entre sections pour équilibrer les scores.
  */
-const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }) => {
+const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   const [dartHits, setDartHits] = useState<DartHit[]>([]);
 
   // Gestion des impacts de fléchettes
   const handleHit = (score: number, multiplier: number, event: React.MouseEvent<SVGElement>) => {
-    if (disabled) return;
     if (dartHits.length >= 3) {
       setDartHits([]);
       return;
@@ -215,12 +212,11 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
   };
 
   return (
-    <div className={`relative inline-block ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+    <div className={`relative inline-block `}>
       {/* Zone de Miss */}
       <div 
         className={`absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
         onClick={(e) => {
-          if (disabled || dartHits.length >= 3) return;
           const rect = e.currentTarget.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -242,12 +238,6 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect, disabled = false }
           />
         ))}
       </div>
-
-      {disabled && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
-          <div className="text-white text-xl font-bold">En attente de votre tour</div>
-        </div>
-      )}
       <div className="p-4">
         <svg
           width={size}
