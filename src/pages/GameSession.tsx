@@ -9,6 +9,7 @@ import { XCircleIcon } from '@heroicons/react/24/outline';
 import VictoryModal from "../components/molecules/VictoryModal";
 import CricketBoard from '../components/CricketBoard';
 import { CricketGameState, CricketHit, PlayerCricketScores } from '../types/cricket';
+import CricketRules from '../components/CricketRules';
 
 interface ExtendedPlayerGame extends Omit<PlayerGame, 'cricketScores'> {
   player: Player;
@@ -49,6 +50,7 @@ const GameSession: React.FC = () => {
     currentPlayerIndex: 0,
     gameStatus: 'IN_PROGRESS'
   });
+  const [showRules, setShowRules] = useState(false);
 
   // Sauvegarder l'index du joueur actif dans le localStorage
   useEffect(() => {
@@ -438,13 +440,28 @@ const GameSession: React.FC = () => {
         <h1 className="text-3xl font-bold text-[var(--text-primary)]">
           {session.game.name}
         </h1>
-        <Link
-          to="/games"
-          className="px-4 py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)]"
-        >
-          Retour aux jeux
-        </Link>
+        <div className="flex gap-4">
+          {session.game.variant === DartVariant.CRICKET && (
+            <button
+              onClick={() => setShowRules(true)}
+              className="px-4 py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)]"
+            >
+              Règles du jeu
+            </button>
+          )}
+          <Link
+            to="/games"
+            className="px-4 py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)]"
+          >
+            Retour aux jeux
+          </Link>
+        </div>
       </div>
+
+      {/* Modal des règles */}
+      {session.game.variant === DartVariant.CRICKET && (
+        <CricketRules isOpen={showRules} onClose={() => setShowRules(false)} />
+      )}
 
       {/* Contenu principal */}
       <div className="space-y-8">
@@ -506,7 +523,8 @@ const GameSession: React.FC = () => {
             {session.game.gameType === GameType.DARTS && session.game.variant === DartVariant.CRICKET ? (
               <CricketBoard
                 gameState={gameState}
-                onScore={handleCricketScore}
+                onScoreClick={handleCricketScore}
+                currentPlayerId={activePlayer}
               />
             ) : (
               <div className="flex items-center justify-center">

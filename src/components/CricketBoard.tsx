@@ -1,179 +1,138 @@
 import React, { useState } from 'react';
-import { CricketGameState, CricketTarget } from '../types/cricket';
-import CricketRules from './CricketRules';
+import type { CricketGameState } from '../types/cricket';
 
 interface CricketBoardProps {
   gameState: CricketGameState;
-  onScore: (target: number, multiplier: number) => void;
+  onScoreClick: (target: number, multiplier: number) => void;
+  currentPlayerId: string;
 }
 
-const CricketBoard: React.FC<CricketBoardProps> = ({ gameState, onScore }) => {
-  const [showRules, setShowRules] = useState(false);
-  const [selectedTarget, setSelectedTarget] = useState<CricketTarget | null>(null);
-  const [selectedMultiplier, setSelectedMultiplier] = useState<number>(1);
+const CricketBoard: React.FC<CricketBoardProps> = ({ gameState, onScoreClick, currentPlayerId }) => {
+  const [selectedTarget, setSelectedTarget] = useState<number | null>(null);
+  const targets = [20, 19, 18, 17, 16, 15, 25];
 
-  // Vérifier si le gameState est initialisé
-  if (!gameState || !gameState.players || !gameState.players.length) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Loading game state...</p>
-      </div>
-    );
-  }
-
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const targets: CricketTarget[] = [20, 19, 18, 17, 16, 15, 25];
-
-  // Fonction pour déterminer si une cible est fermée pour un joueur
-  const isTargetClosed = (playerId: string, target: CricketTarget) => {
-    const player = gameState.players.find(p => p.id === playerId);
-    if (!player) return false;
-    return player.scores[target]?.hits >= 3;
-  };
-
-  // Fonction pour déterminer si une cible est fermée par tous les joueurs
-  const isTargetClosedByAll = (target: CricketTarget) => {
-    return gameState.players.every(player => isTargetClosed(player.id, target));
-  };
-
-  // Fonction pour obtenir le statut d'une cible (active, fermée, inactive)
-  const getTargetStatus = (target: CricketTarget) => {
-    if (isTargetClosedByAll(target)) return 'closed';
-    if (isTargetClosed(currentPlayer.id, target)) return 'inactive';
-    return 'active';
-  };
-
-  const handleTargetClick = (target: CricketTarget) => {
+  const handleTargetClick = (target: number) => {
     setSelectedTarget(target);
   };
 
   const handleMultiplierClick = (multiplier: number) => {
-    setSelectedMultiplier(multiplier);
     if (selectedTarget !== null) {
-      onScore(selectedTarget, multiplier);
+      onScoreClick(selectedTarget, multiplier);
       setSelectedTarget(null);
-      setSelectedMultiplier(1);
     }
   };
 
-  return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Cricket - {currentPlayer.username}'s turn</h2>
-        <button
-          onClick={() => setShowRules(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Show Rules
-        </button>
-      </div>
+  const renderHitMarker = (hits: number, index: number) => {
+    if (hits === 0) return <div className="w-6 h-6 rounded-full border-2 border-[var(--border-subtle)]" />;
+    if (index === 0 && hits >= 1) return <div className="w-6 h-6 rounded-full border-2 border-[var(--accent-primary)] bg-[var(--accent-primary)]/20 flex items-center justify-center">/</div>;
+    if (index === 1 && hits >= 2) return <div className="w-6 h-6 rounded-full border-2 border-[var(--accent-primary)] bg-[var(--accent-primary)]/20 flex items-center justify-center">×</div>;
+    if (index === 2 && hits >= 3) return <div className="w-6 h-6 rounded-full border-2 border-[var(--accent-primary)] bg-[var(--accent-primary)] flex items-center justify-center">●</div>;
+    return <div className="w-6 h-6 rounded-full border-2 border-[var(--border-subtle)]" />;
+  };
 
-      {/* Score Board */}
-      <div className="overflow-x-auto mb-6">
-        <table className="w-full min-w-[600px] border-collapse">
+  return (
+    <div className="space-y-4">
+      {/* Score Table - More compact */}
+      <div className="game-card overflow-hidden">
+        <table className="w-full">
           <thead>
-            <tr>
-              <th className="text-left p-2">Player</th>
-              {targets.map(target => (
-                <th key={target} className="text-center p-2">{target}</th>
+            <tr className="border-b border-[var(--border-subtle)]">
+              <th className="px-4 py-2 text-left text-lg">Cible</th>
+              {gameState.players.map(player => (
+                <th 
+                  key={player.id}
+                  className={`px-4 py-2 text-center text-lg ${
+                    player.id === currentPlayerId ? 'text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {player.username}
+                </th>
               ))}
-              <th className="text-center p-2">Points</th>
             </tr>
           </thead>
           <tbody>
-            {gameState.players.map(player => (
+            {targets.map(target => (
               <tr 
-                key={player.id}
-                className={player.id === currentPlayer.id ? 'bg-blue-50' : ''}
+                key={target} 
+                className={`border-b border-[var(--border-subtle)] last:border-0 ${
+                  selectedTarget === target ? 'bg-[var(--accent-primary)]/10' : ''
+                }`}
               >
-                <td className="p-2">{player.username}</td>
-                {targets.map(target => {
-                  const hits = player.scores[target]?.hits || 0;
-                  const points = player.scores[target]?.points || 0;
+                <td className="px-4 py-3 font-medium text-lg">
+                  {target === 25 ? 'Bull' : target}
+                </td>
+                {gameState.players.map(player => {
+                  const hits = player.scores[target].hits;
+                  const points = player.scores[target].points;
                   return (
-                    <td key={target} className="text-center p-2">
-                      <div className="flex flex-col items-center">
-                        <div className="flex gap-1 mb-1">
-                          {Array.from({ length: 3 }, (_, i) => (
-                            <span
-                              key={i}
-                              className={`inline-block w-2 h-2 rounded-full ${
-                                i < hits ? 'bg-green-500' : 'bg-gray-300'
-                              }`}
-                            />
+                    <td key={`${player.id}-${target}`} className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center gap-2">
+                          {[0, 1, 2].map((_, i) => (
+                            <div key={i} className="flex items-center justify-center">
+                              {renderHitMarker(hits, i)}
+                            </div>
                           ))}
                         </div>
                         {points > 0 && (
-                          <span className="text-sm text-gray-600">{points}</span>
+                          <span className="text-[var(--accent-primary)] text-lg font-medium ml-2">
+                            +{points}
+                          </span>
                         )}
                       </div>
                     </td>
                   );
                 })}
-                <td className="text-center p-2 font-bold">{player.totalPoints}</td>
               </tr>
             ))}
+            <tr className="border-t-2 border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+              <td className="px-4 py-3 font-medium text-lg">Total</td>
+              {gameState.players.map(player => (
+                <td key={player.id} className="px-4 py-3 text-center font-medium text-lg">
+                  {player.totalPoints}
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
 
-      {/* Target Selection */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        {targets.map(target => {
-          const status = getTargetStatus(target);
-          const hits = currentPlayer.scores[target]?.hits || 0;
-          return (
+      {/* Interactive Controls */}
+      <div className="game-card p-4">
+        <div className="grid grid-cols-7 gap-2 mb-4">
+          {targets.map(target => (
             <button
               key={target}
               onClick={() => handleTargetClick(target)}
-              disabled={status === 'inactive' || status === 'closed'}
-              className={`p-4 rounded-lg ${
-                selectedTarget === target
-                  ? 'bg-blue-500 text-white'
-                  : status === 'active'
-                  ? 'bg-green-100 hover:bg-green-200'
-                  : status === 'inactive'
-                  ? 'bg-yellow-100'
-                  : 'bg-gray-100'
-              }`}
+              className={`game-button-option aspect-square flex items-center justify-center text-xl font-medium
+                ${selectedTarget === target ? 'active' : ''}`}
             >
-              <div className="font-bold">{target}</div>
-              <div className="mt-2">
-                {Array.from({ length: 3 }, (_, i) => (
-                  <span
-                    key={i}
-                    className={`inline-block w-2 h-2 mx-1 rounded-full ${
-                      i < hits ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
+              {target === 25 ? 'Bull' : target}
             </button>
-          );
-        })}
+          ))}
+        </div>
+
+        <div className="flex justify-center gap-4">
+          {[1, 2, 3].map(multiplier => (
+            <button
+              key={multiplier}
+              onClick={() => handleMultiplierClick(multiplier)}
+              disabled={selectedTarget === null}
+              className={`game-button-option px-8 py-3 text-xl font-medium
+                ${selectedTarget === null ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {multiplier}x
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Multiplier Selection */}
-      <div className="grid grid-cols-3 gap-4">
-        {[1, 2, 3].map(multiplier => (
-          <button
-            key={multiplier}
-            onClick={() => handleMultiplierClick(multiplier)}
-            disabled={selectedTarget === null}
-            className={`p-4 rounded-lg ${
-              selectedMultiplier === multiplier && selectedTarget !== null
-                ? 'bg-blue-500 text-white'
-                : selectedTarget === null
-                ? 'bg-gray-100'
-                : 'bg-green-100 hover:bg-green-200'
-            }`}
-          >
-            {multiplier}x
-          </button>
-        ))}
+      {/* Current Action Indicator */}
+      <div className="text-center text-base text-[var(--text-secondary)]">
+        {selectedTarget === null 
+          ? "Sélectionnez une cible"
+          : `Cible sélectionnée : ${selectedTarget === 25 ? 'Bull' : selectedTarget} - Choisissez un multiplicateur`}
       </div>
-
-      {showRules && <CricketRules isOpen={showRules} onClose={() => setShowRules(false)} />}
     </div>
   );
 };
