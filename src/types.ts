@@ -1,6 +1,4 @@
-export type GameType = 'DARTS' | 'BILLIARDS';
-
-export type DartVariant = 'FIVE_HUNDRED_ONE' | 'THREE_HUNDRED_ONE' | 'CRICKET' | 'AROUND_THE_CLOCK';
+import { DartVariant, GameType } from "./types/game";
 
 export interface CreateGameDto {
   name: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { auth } from '../api/services';
+import { auth } from '../api/auth';
 import type { User, UserActivity } from '../types/index';
 import ProgressCharts from '../components/molecules/ProgressCharts';
 

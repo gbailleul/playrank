@@ -1,38 +1,5 @@
-export enum GameType {
-  GAME_301 = 'GAME_301',
-  GAME_501 = 'GAME_501',
-  CRICKET = 'CRICKET'
-}
-
-export enum GameStatus {
-  PENDING = 'PENDING',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED'
-}
-
-export enum DartVariant {
-  FIVE_HUNDRED_ONE = 'FIVE_HUNDRED_ONE',
-  THREE_HUNDRED_ONE = 'THREE_HUNDRED_ONE',
-  CRICKET = 'CRICKET',
-  AROUND_THE_CLOCK = 'AROUND_THE_CLOCK'
-}
-
-export type UserRole = 'ADMIN' | 'PLAYER' | 'VIEWER';
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BANNED';
-
-export interface UserStatistics {
-  gamesCreated: number;
-  gamesPlayed: number;
-  gamesWon: number;
-  winRate: number;
-  averagePointsPerDart: number;
-  accuracy: number;
-  highestScore: number;
-  totalDoubles: number;
-  totalTriples: number;
-  totalDartsThrown: number;
-}
+import { GameType, DartVariant, GameStatus } from './game';
+import { PlayerCricketScores } from './cricket';
 
 export interface User {
   id: string;
@@ -41,20 +8,10 @@ export interface User {
   username: string;
   email: string;
   avatarUrl?: string;
-  role: UserRole;
-  status: UserStatus;
-  statistics?: UserStatistics;
-  playerGames?: PlayerGame[];
-  recentActivity?: UserActivity[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UserActivity {
-  type: 'game_created' | 'game_played';
-  game: GameInfo;
-  timestamp: string;
-  result?: GameResult;
+  role: 'ADMIN' | 'PLAYER' | 'VIEWER';
+  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Game {
@@ -66,87 +23,20 @@ export interface Game {
   minPlayers: number;
   maxPlayers: number;
   creatorId: string;
-  variant?: DartVariant;
+  variant: DartVariant;
+  createdAt: Date;
+  updatedAt: Date;
   sessions?: GameSession[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface CreateGameDto {
   name: string;
+  description: string;
   gameType: GameType;
-  description?: string;
   maxScore: number;
   minPlayers: number;
   maxPlayers: number;
-  variant?: string;
-}
-
-export interface GameSession {
-  id: string;
-  gameId: string;
-  game: Game;
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  players: PlayerGame[];
-  startedAt: string | null;
-  endedAt: string | null;
-  winnerId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PlayerGame {
-  id: string;
-  playerId: string;
-  gameSession: GameSession;
-  scores: Score[];
-  rank: number | null;
-  joinedAt: string;
-}
-
-export interface Score {
-  id: string;
-  points: number;
-  turnNumber: number;
-  createdAt: string;
-}
-
-export interface LoginDto {
-  email: string;
-  password: string;
-}
-
-export interface RegisterDto {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: User;
-}
-
-export interface Player {
-  id: string;
-  username: string;
-}
-
-export interface PlayerStats {
-  id: string;
-  username: string;
-  dartsThrown: number;
-  accuracy: number;
-  lastScore: number;
-  score: number;
-}
-
-export interface ScoreResponse {
-  score: Score;
-  session: GameSession;
-  currentPlayerId: string;
-  isWinner: boolean;
+  variant: DartVariant;
 }
 
 export interface AddScoreData {
@@ -156,82 +46,67 @@ export interface AddScoreData {
   isDouble?: boolean;
 }
 
-export interface DashboardGame {
-  id: string;
-  name: string;
-  gameType: GameType;
-  variant?: DartVariant;
-  status: GameStatus;
-  startedAt?: Date;
-  endedAt?: Date;
-  players: {
-    id: string;
-    username: string;
-    avatarUrl?: string;
-    currentScore: number;
-    statistics?: UserStatistics;
-  }[];
-  winner?: {
-    id: string;
-    username: string;
-    avatarUrl?: string;
-  };
+export interface CricketScoreData {
+  playerId: string;
+  target: number;
+  multiplier: number;
+  turnNumber: number;
 }
 
-export interface DashboardResponse {
-  games: DashboardGame[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-  };
-  globalStats: {
-    averageAccuracy: number;
-    averagePointsPerDart: number;
-    averageGamesPerPlayer: number;
-    totalDartsThrown: number;
-    totalDoubles: number;
-    totalTriples: number;
-  };
-  topPlayers: {
-    id: string;
-    username: string;
-    avatarUrl?: string;
-    statistics: {
-      gamesWon: number;
-      winRate: number;
-      averagePointsPerDart: number;
-    };
-  }[];
+export interface Score {
+  id: string;
+  points: number;
+  turnNumber: number;
+  isDouble: boolean;
+  createdAt: Date;
+}
+
+export interface CricketScore {
+  id: string;
+  scores: PlayerCricketScores;
+  createdAt: Date;
+}
+
+export interface Player {
+  id: string;
+  username: string;
+}
+
+export interface PlayerGame {
+  id: string;
+  playerId: string;
+  scores: Score[];
+  cricketScores?: CricketScore;
+}
+
+export interface GameSession {
+  id: string;
+  gameId: string;
+  game: Game;
+  players: PlayerGame[];
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  winnerId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface LeaderboardEntry {
   id: string;
+  rank: number;
   username: string;
   avatarUrl?: string;
   gamesPlayed: number;
   gamesWon: number;
   winRate: number;
-  averagePointsPerDart: number;
   accuracy: number;
-  rank: number;
+  averagePointsPerDart: number;
 }
 
 export interface LeaderboardResponse {
-  gameType: GameType;
   entries: LeaderboardEntry[];
-  totalPlayers: number;
   userRank?: LeaderboardEntry;
 }
 
-export interface GameResult {
-  won: boolean;
-  rank?: number;
-}
-
-export interface GameInfo {
-  id: string;
-  name: string;
-  gameType: string;
-} 
+export { GameType, DartVariant, GameStatus };
+export * from './cricket';
+export type { DashboardResponse } from './game';

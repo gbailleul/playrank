@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { leaderboardService } from '../api/services';
+import { leaderboardService } from '../api/services/leaderboardService';
 import type { LeaderboardResponse, LeaderboardEntry } from '../types/index';
-import { GameType } from '../types/index';
+import { DartVariant, GameType } from '../types/index';
 import GamingAvatar from '../components/atoms/GamingAvatar';
 
 const Leaderboard: React.FC = () => {
   const { user } = useAuth();
-  const [selectedGameType, setSelectedGameType] = useState<GameType>(GameType.GAME_301);
+  const [selectedGameType, setSelectedGameType] = useState<DartVariant>(DartVariant.FIVE_HUNDRED_ONE);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,20 +49,21 @@ const Leaderboard: React.FC = () => {
     );
   }
 
-  const gameTypeLabels: Record<GameType, string> = {
-    [GameType.GAME_301]: '301',
-    [GameType.GAME_501]: '501',
-    [GameType.CRICKET]: 'Cricket'
+  const gameTypeLabels: Record<DartVariant, string> = {
+    [DartVariant.THREE_HUNDRED_ONE]: '301',
+    [DartVariant.FIVE_HUNDRED_ONE]: '501',
+    [DartVariant.CRICKET]: 'Cricket',
+    [DartVariant.AROUND_THE_CLOCK]: 'Around the Clock'
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] bg-fixed p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header */}TESTETSTETST
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">Classement</h1>
           <div className="flex space-x-4">
-            {Object.values(GameType).map((type: GameType) => (
+            {Object.values(DartVariant).map((type: DartVariant) => (
               <button
                 key={type}
                 onClick={() => setSelectedGameType(type)}

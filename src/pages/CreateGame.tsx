@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { CreateGameDto, User } from '../types';
-import { gameService, auth } from '../api/services';
+import type { CreateGameDto, User } from '../types/index';
+import { GameType, DartVariant } from '../types/index';
+import { gameService } from '../api/services';
+import { auth } from '../api/auth';
 import { useAuth } from '../contexts/AuthContext';
 
 type DartGameVariant = '501' | '301' | 'Cricket' | 'Around the Clock';
-type DartVariantBackend = 'FIVE_HUNDRED_ONE' | 'THREE_HUNDRED_ONE' | 'CRICKET' | 'AROUND_THE_CLOCK';
 
-const variantMapping: Record<DartGameVariant, DartVariantBackend> = {
-  '501': 'FIVE_HUNDRED_ONE',
-  '301': 'THREE_HUNDRED_ONE',
-  'Cricket': 'CRICKET',
-  'Around the Clock': 'AROUND_THE_CLOCK'
+const variantMapping: Record<DartGameVariant, DartVariant> = {
+  '501': DartVariant.FIVE_HUNDRED_ONE,
+  '301': DartVariant.THREE_HUNDRED_ONE,
+  'Cricket': DartVariant.CRICKET,
+  'Around the Clock': DartVariant.AROUND_THE_CLOCK
 };
 
 const CreateGame: React.FC = () => {
@@ -21,11 +22,11 @@ const CreateGame: React.FC = () => {
   const [formData, setFormData] = useState<CreateGameDto>({
     name: '',
     description: '',
-    gameType: 'DARTS',
+    gameType: GameType.DARTS,
     maxScore: 501,
     minPlayers: 2,
     maxPlayers: 4,
-    variant: 'FIVE_HUNDRED_ONE'
+    variant: DartVariant.FIVE_HUNDRED_ONE
   });
   const [error, setError] = useState<string | null>(null);
   const [allPlayers, setAllPlayers] = useState<User[]>([]);
@@ -118,21 +119,28 @@ const CreateGame: React.FC = () => {
 
     try {
       // Create game with updated player count
-      const gameData = {
-        ...formData,
+      const gameData: CreateGameDto = {
+        name: formData.name || `Partie de ${gameVariant}`,
+        description: formData.description || `Partie de ${gameVariant} à ${totalPlayers} joueurs`,
+        gameType: GameType.DARTS,
+        maxScore: formData.maxScore,
         minPlayers: 2,
         maxPlayers: 4,
-        currentPlayers: totalPlayers
+        variant: variantMapping[gameVariant]
       };
       
-      const gameResponse = await gameService.createGame(gameData);
+      const { data: game } = await gameService.createGame(gameData);
       
       // Create session with selected players (including creator)
       const playerIds = selectedPlayers.map(p => p.id);
-      await gameService.createGameSession(gameResponse.data.id, [currentUser!.id, ...playerIds]);
+      const sessionData = {
+        players: [currentUser!.id, ...playerIds]
+      };
+      
+      await gameService.createGameSession(game.id, sessionData);
       
       // Redirect to game page
-      navigate(`/games/${gameResponse.data.id}`);
+      navigate(`/games/${game.id}`);
     } catch (error: any) {
       console.error('Error creating game:', error);
       setError(error.response?.data?.message || 'Échec de la création de la partie');
