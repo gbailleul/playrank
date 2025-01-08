@@ -64,14 +64,14 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
   args: {
     variant: 'primary',
-    children: 'Commencer la partie',
+    children: 'Bouton Primary',
   },
 };
 
 export const Secondary: Story = {
   args: {
     variant: 'secondary',
-    children: 'Annuler',
+    children: 'Bouton Secondary',
   },
 };
 

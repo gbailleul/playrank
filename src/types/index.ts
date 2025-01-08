@@ -77,8 +77,15 @@ export interface Player {
 export interface PlayerGame {
   id: string;
   playerId: string;
+  gameSessionId: string;
+  gameSession: GameSession;
+  player: User;
   scores: Score[];
-  cricketScores?: CricketScore;
+  cricketScores?: {
+    scores: PlayerCricketScores;
+  };
+  currentScore: number;
+  joinedAt: Date;
 }
 
 export interface GameSession {

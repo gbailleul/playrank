@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   HomeIcon,
-  TrophyIcon,
   UserGroupIcon,
   ChartBarIcon,
   ArrowRightOnRectangleIcon,

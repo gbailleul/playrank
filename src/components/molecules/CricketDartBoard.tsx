@@ -73,20 +73,13 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
    * @param event - Événement de clic
    */
   const handleHit = (target: number, multiplier: number, event: React.MouseEvent<SVGElement>) => {
-    if (!currentPlayer || dartHits.length >= 3) return;
-
-    const svg = event.currentTarget.closest('svg');
-    if (!svg) return;
-
-    const svgRect = svg.getBoundingClientRect();
-    const viewBox = svg.viewBox.baseVal;
+    if (dartHits.length >= 3) return; // Maximum 3 darts per turn
     
-    const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
-    const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
-
-    const newHit: DartHit = { target, multiplier, x, y };
-    const newHits = [...dartHits, newHit];
-    setDartHits(newHits);
+    const rect = (event.target as SVGElement).getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    setDartHits(prev => [...prev, { target, multiplier, x, y }]);
   };
 
   /**
@@ -187,6 +180,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         {paths.map((path, pathIndex) => (
           <path
             key={pathIndex}
+            data-testid={`target-${score}-${pathIndex === 0 ? 'double' : pathIndex === 2 ? 'triple' : 'single'}`}
             d={path}
             className={`cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80 ${
               isHit(pathIndex) ? 'fill-[var(--neon-primary)] opacity-70' : getBaseColor()
@@ -220,10 +214,28 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
     );
   };
 
+  const handleValidateScore = () => {
+    // Collect all valid throws
+    const validThrows = dartHits
+      .filter(hit => !hit.isMiss)
+      .map(hit => ({
+        target: hit.target,
+        multiplier: hit.multiplier
+      }));
+
+    // Send all throws at once
+    onScoreClick(validThrows);
+    
+    // Reset darts
+    setDartHits([]);
+    onTurnComplete();
+  };
+
   return (
     <div className="relative inline-block">
       {/* Zone de Miss */}
       <div 
+        data-testid="miss-zone"
         className={`absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
         onClick={(e) => {
           if (dartHits.length >= 3) return;
@@ -279,10 +291,18 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         <circle cx={center} cy={center} r={bullOuter} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
         
         {/* Sections */}
-        {sections.map((score, index) => createSection(index, score))}
+        {sections.map((score, index) => {
+          const section = createSection(index, score);
+          return (
+            <g key={score} data-testid={`target-${score}`}>
+              {section}
+            </g>
+          );
+        })}
 
         {/* Bull's eye */}
         <circle 
+          data-testid="bull-outer"
           cx={center} 
           cy={center} 
           r={bullOuter}
@@ -291,6 +311,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
           onClick={(e) => handleHit(25, 1, e)}
         />
         <circle 
+          data-testid="bull-inner"
           cx={center} 
           cy={center} 
           r={bullInner}
@@ -339,7 +360,8 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
           
           return (
             <div 
-              key={index} 
+              key={index}
+              data-testid={`dart-indicator-${index + 1}`}
               className={`flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-gray-700 transition-all duration-300 ${
                 index < dartHits.length ? 'bg-[var(--glass-bg)]' : 'bg-gray-800 opacity-40'
               }`}
@@ -373,26 +395,8 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
       {dartHits.length === 3 && (
         <div className="mt-4 text-center">
           <button
-            onClick={() => {
-              // Collecter tous les lancers valides
-              const validThrows = dartHits
-                .filter(hit => !hit.isMiss)
-                .map(hit => ({
-                  target: hit.target,
-                  multiplier: hit.multiplier
-                }));
-
-              console.log('=== CricketDartBoard - Validation des lancers ===');
-              console.log('Lancers bruts:', dartHits);
-              console.log('Lancers valides envoyés:', validThrows);
-
-              // Envoyer tous les lancers en une seule fois
-              onScoreClick(validThrows);
-              
-              // Réinitialiser les fléchettes
-              setDartHits([]);
-              onTurnComplete();
-            }}
+            data-testid="validate-score-button"
+            onClick={handleValidateScore}
             className="game-button"
           >
             Valider le score

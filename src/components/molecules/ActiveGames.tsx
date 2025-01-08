@@ -70,10 +70,6 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
     }
   };
 
-  const handleRowClick = (game: DashboardGame) => {
-    navigate(`/games/${game.id}`);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">

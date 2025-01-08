@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { gameService } from '../api/services';
 import axios from 'axios';
+import { GameType, DartVariant } from '../types/game';
 
 const TestConnection = () => {
   const [backendStatus, setBackendStatus] = useState<'Connected' | 'Not Connected'>('Not Connected');
@@ -33,11 +34,12 @@ const TestConnection = () => {
     try {
       const { data } = await gameService.createGame({
         name: 'Test Game',
-        type: 'DARTS',
+        gameType: GameType.DARTS,
         description: 'A test game',
         maxScore: 501,
         minPlayers: 2,
         maxPlayers: 4,
+        variant: DartVariant.FIVE_HUNDRED_ONE
       });
       setTestResults(prev => ({
         ...prev,
