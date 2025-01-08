@@ -10,6 +10,7 @@ interface InputFieldProps {
   error?: string;
   placeholder: string;
   autoComplete?: string;
+  required?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
