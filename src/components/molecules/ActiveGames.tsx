@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { GameStatus } from '../../types/index';
 import type { Player as BasePlayer } from '../../types/index';
 
@@ -29,6 +30,7 @@ interface ActiveGamesProps {
 
 const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChange }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const formatTime = (date?: Date) => {
     if (!date) return '';
@@ -64,10 +66,17 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
   };
 
   const handleGameClick = (game: DashboardGame) => {
-    console.log('game', game);
-    if (game.status === GameStatus.IN_PROGRESS && !game.winner) {
+    if (!user) return;
+    
+    const isPlayerInGame = game.players.some(player => player.id === user.id);
+    if (game.status === GameStatus.IN_PROGRESS && !game.winner && isPlayerInGame) {
       navigate(`/games/${game.id}`);
     }
+  };
+
+  const canJoinGame = (game: DashboardGame): boolean => {
+    if (!user) return false;
+    return game.status === GameStatus.IN_PROGRESS && !game.winner && game.players.some(player => player.id === user.id);
   };
 
   return (
@@ -101,12 +110,12 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
                 <tr 
                   key={game.id}
                   className={`hover:bg-white/5 transition-colors ${
-                    game.status === GameStatus.IN_PROGRESS && !game.winner ? 'cursor-pointer' : ''
+                    canJoinGame(game) ? 'cursor-pointer' : ''
                   }`}
                   onClick={() => handleGameClick(game)}
                 >
                   <td className="p-4">
-                    {game.status === GameStatus.IN_PROGRESS && !game.winner ? (
+                    {canJoinGame(game) ? (
                       <span className="text-[var(--text-primary)] hover:text-[var(--accent-blue)] transition-colors">
                         {game.name}
                       </span>
