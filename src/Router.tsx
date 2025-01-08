@@ -6,6 +6,8 @@ import Profile from './pages/Profile';
 import TestConnection from './components/TestConnection';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import CreateGame from './pages/CreateGame';
 import GameSession from './pages/GameSession';
 import Leaderboard from './pages/Leaderboard';
@@ -65,6 +67,22 @@ const Router = () => {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPassword />
           </PublicRoute>
         }
       />

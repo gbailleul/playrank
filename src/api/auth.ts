@@ -24,6 +24,14 @@ export const auth = {
     });
   },
 
+  forgotPassword: (email: string) => {
+    return client.post('/auth/forgot-password', { email });
+  },
+
+  resetPassword: (token: string, password: string) => {
+    return client.post('/auth/reset-password', { token, password });
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     return client.post('/auth/logout');
