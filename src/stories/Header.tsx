@@ -1,6 +1,4 @@
-import React from 'react';
-
-import { Button } from './Button';
+import { GameButton } from '../components/atoms/GameButton';
 import './header.css';
 
 type User = {
@@ -42,12 +40,12 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
             <span className="welcome">
               Welcome, <b>{user.name}</b>!
             </span>
-            <Button size="small" onClick={onLogout} label="Log out" />
+            <GameButton variant="secondary" onClick={onLogout}>Log out</GameButton>
           </>
         ) : (
           <>
-            <Button size="small" onClick={onLogin} label="Log in" />
-            <Button primary size="small" onClick={onCreateAccount} label="Sign up" />
+            <GameButton variant="secondary" onClick={onLogin}>Log in</GameButton>
+            <GameButton variant="primary" onClick={onCreateAccount}>Sign up</GameButton>
           </>
         )}
       </div>

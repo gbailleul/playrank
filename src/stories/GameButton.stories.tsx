@@ -199,7 +199,7 @@ export const InContext: Story = {
             </div>
           </GameButton>
         </div>
-        <GameButton variant="primary">Commencer la partie</GameButton>
+        <Story />
       </div>
     ),
   ],

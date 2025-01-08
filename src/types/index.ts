@@ -1,4 +1,4 @@
-import { GameType, DartVariant, GameStatus } from './game';
+import { GameType, DartVariant, GameStatus, DashboardGame } from './game';
 import { PlayerCricketScores } from './cricket';
 
 export interface UserStatistics {
@@ -168,4 +168,3 @@ export interface DashboardResponse {
 
 export { GameType, DartVariant, GameStatus };
 export * from './cricket';
-export type { DashboardResponse } from './game';
