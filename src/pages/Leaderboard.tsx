@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { leaderboardService } from '../api/services/leaderboardService';
 import type { LeaderboardResponse, LeaderboardEntry } from '../types/index';
-import { DartVariant, GameType } from '../types/index';
+import { DartVariant } from '../types/index';
 import GamingAvatar from '../components/atoms/GamingAvatar';
 
 const Leaderboard: React.FC = () => {
@@ -16,7 +16,7 @@ const Leaderboard: React.FC = () => {
     const fetchLeaderboard = async () => {
       try {
         setLoading(true);
-        const { data } = await leaderboardService.getLeaderboard(selectedGameType);
+        const data = await leaderboardService.getLeaderboard(selectedGameType);
         setLeaderboardData(data);
         setError(null);
       } catch (err) {

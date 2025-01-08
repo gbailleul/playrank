@@ -80,8 +80,8 @@ const Profile = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -92,20 +92,28 @@ const Profile = () => {
 
   const getActivityIcon = (activity: UserActivity) => {
     switch (activity.type) {
-      case 'game_created':
+      case 'GAME_PLAYED':
         return (
           <div className="w-8 h-8 rounded-full bg-[var(--accent-blue)]/10 flex items-center justify-center">
             <svg className="w-4 h-4 text-[var(--accent-blue)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
         );
-      case 'game_played':
+      case 'ACHIEVEMENT_UNLOCKED':
         return (
           <div className="w-8 h-8 rounded-full bg-[var(--accent-purple)]/10 flex items-center justify-center">
             <svg className="w-4 h-4 text-[var(--accent-purple)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </div>
+        );
+      case 'RANK_CHANGED':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[var(--accent-green)]/10 flex items-center justify-center">
+            <svg className="w-4 h-4 text-[var(--accent-green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
           </div>
         );
@@ -171,10 +179,6 @@ const Profile = () => {
             <h2 className="text-lg font-semibold mb-4">Statistiques de jeu</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="game-card bg-[var(--secondary-dark)] p-4">
-                <p className="text-sm text-[var(--text-secondary)]">Parties créées</p>
-                <p className="text-2xl font-bold mt-1">{user.statistics?.gamesCreated || 0}</p>
-              </div>
-              <div className="game-card bg-[var(--secondary-dark)] p-4">
                 <p className="text-sm text-[var(--text-secondary)]">Parties jouées</p>
                 <p className="text-2xl font-bold mt-1">{user.statistics?.gamesPlayed || 0}</p>
               </div>
@@ -183,8 +187,12 @@ const Profile = () => {
                 <p className="text-2xl font-bold mt-1">{user.statistics?.gamesWon || 0}</p>
               </div>
               <div className="game-card bg-[var(--secondary-dark)] p-4">
-                <p className="text-sm text-[var(--text-secondary)]">Taux de victoire</p>
-                <p className="text-2xl font-bold mt-1">{user.statistics?.winRate || 0}%</p>
+                <p className="text-sm text-[var(--text-secondary)]">Précision</p>
+                <p className="text-2xl font-bold mt-1">{user.statistics?.accuracy.toFixed(1) || 0}%</p>
+              </div>
+              <div className="game-card bg-[var(--secondary-dark)] p-4">
+                <p className="text-sm text-[var(--text-secondary)]">Points/Fléchette</p>
+                <p className="text-2xl font-bold mt-1">{user.statistics?.averagePointsPerDart.toFixed(1) || 0}</p>
               </div>
             </div>
           </div>
@@ -209,27 +217,16 @@ const Profile = () => {
                     {getActivityIcon(activity)}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">
-                        {activity.type === 'game_created' ? (
-                          <>A créé une nouvelle partie de {activity.game.gameType.toLowerCase()}: <span className="text-[var(--accent-blue)]">{activity.game.name}</span></>
-                        ) : (
-                          <>
-                            A joué à {activity.game.gameType.toLowerCase()}: <span className="text-[var(--accent-blue)]">{activity.game.name}</span>
-                            {activity.result && (
-                              <span className="ml-2">
-                                {activity.result.won ? (
-                                  <span className="text-[var(--success)]">Victoire</span>
-                                ) : (
-                                  <span className="text-[var(--text-secondary)]">
-                                    {activity.result.rank ? `Classé #${activity.result.rank}` : 'A participé'}
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </>
-                        )}
+                        {activity.description}
                       </p>
                       <p className="text-xs text-[var(--text-secondary)] mt-1">
-                        {formatDate(activity.timestamp)}
+                        {new Date(activity.timestamp).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </p>
                     </div>
                   </div>

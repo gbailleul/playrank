@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { gameSessionService } from '../api/services';
-import { GameSession, User } from '../types';
+import { gameService } from '../api/services';
+import type { GameSession, User, PlayerGame } from '../types/index';
 import { UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const GameSetup: React.FC = () => {
@@ -17,10 +17,19 @@ const GameSetup: React.FC = () => {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const { data } = await gameSessionService.getSession(Number(id));
-        setSession(data);
-        // Set any existing players
-        setSelectedPlayers(data.players.map(p => p.player));
+        if (!id) return;
+        const { data } = await gameService.getSession(id);
+        const gameSession: GameSession = {
+          id: data.id,
+          gameId: data.id,
+          game: data,
+          players: data.sessions?.[0]?.players || [],
+          status: 'IN_PROGRESS',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        setSession(gameSession);
+        setSelectedPlayers(gameSession.players.map((p: PlayerGame) => p.player));
       } catch (err) {
         setError('Failed to load game session');
       } finally {
@@ -37,9 +46,8 @@ const GameSetup: React.FC = () => {
   const searchUsers = async (term: string) => {
     // TODO: Implement actual user search
     const mockUsers: User[] = [
-      { id: 1, username: 'player1', email: 'player1@example.com' },
-      { id: 2, username: 'player2', email: 'player2@example.com' },
-      // Add more mock users as needed
+      { id: '1', username: 'player1', email: 'player1@example.com', firstName: '', lastName: '', role: 'PLAYER', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() },
+      { id: '2', username: 'player2', email: 'player2@example.com', firstName: '', lastName: '', role: 'PLAYER', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() },
     ];
     return mockUsers.filter(user => 
       user.username.toLowerCase().includes(term.toLowerCase())
@@ -62,7 +70,7 @@ const GameSetup: React.FC = () => {
   }, [searchTerm, selectedPlayers]);
 
   const handleAddPlayer = (player: User) => {
-    if (session?.game.max_players && selectedPlayers.length >= session.game.max_players) {
+    if (session?.game.maxPlayers && selectedPlayers.length >= session.game.maxPlayers) {
       setError('Maximum number of players reached');
       return;
     }
@@ -71,7 +79,7 @@ const GameSetup: React.FC = () => {
     setSearchResults([]);
   };
 
-  const handleRemovePlayer = (playerId: number) => {
+  const handleRemovePlayer = (playerId: string) => {
     setSelectedPlayers(selectedPlayers.filter(p => p.id !== playerId));
   };
 
@@ -79,19 +87,15 @@ const GameSetup: React.FC = () => {
     if (!session) return;
 
     try {
-      if (selectedPlayers.length < session.game.min_players) {
-        setError(`Minimum ${session.game.min_players} players required`);
+      if (selectedPlayers.length < session.game.minPlayers) {
+        setError(`Minimum ${session.game.minPlayers} players required`);
         return;
       }
 
       // Update session with selected players
-      await gameSessionService.createSession({
-        game: session.game.id,
-        players: selectedPlayers.map(p => p.id),
+      await gameService.createGameSession(session.game.id, {
+        players: selectedPlayers.map(p => p.id)
       });
-
-      // Start the game
-      await gameSessionService.startSession(session.id);
 
       // Navigate to the game page
       navigate(`/games/${session.id}`);
@@ -128,8 +132,8 @@ const GameSetup: React.FC = () => {
             {session.game.name}
           </h2>
           <p className="text-secondary-400">
-            {session.game.game_type} - {session.game.min_players} to{' '}
-            {session.game.max_players} players
+            {session.game.gameType} - {session.game.minPlayers} to{' '}
+            {session.game.maxPlayers} players
           </p>
         </div>
 
@@ -180,7 +184,7 @@ const GameSetup: React.FC = () => {
         {/* Selected Players */}
         <div>
           <h3 className="text-sm font-medium text-secondary-300 mb-3">
-            Selected Players ({selectedPlayers.length}/{session.game.max_players})
+            Selected Players ({selectedPlayers.length}/{session.game.maxPlayers})
           </h3>
           <div className="space-y-2">
             {selectedPlayers.map((player) => (
@@ -190,7 +194,7 @@ const GameSetup: React.FC = () => {
               >
                 <div className="flex items-center">
                   <img
-                    src={player.avatar_url || 'https://via.placeholder.com/32'}
+                    src={player.avatarUrl || 'https://via.placeholder.com/32'}
                     alt={player.username}
                     className="w-8 h-8 rounded-full"
                   />
@@ -217,7 +221,7 @@ const GameSetup: React.FC = () => {
           <button
             onClick={handleStartGame}
             className="btn-primary"
-            disabled={selectedPlayers.length < session.game.min_players}
+            disabled={selectedPlayers.length < session.game.minPlayers}
           >
             Commencer la partie
           </button>
