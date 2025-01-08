@@ -17,14 +17,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import type { GameSession, PlayerGame, Score, Game, Player, AddScoreData } from "../types/index";
+import type { GameSession, PlayerGame, Score, AddScoreData, User } from "../types/index";
 import { GameType, DartVariant } from "../types/index";
 import DartBoard from "../components/molecules/DartBoard";
 import { gameService } from "../api/services";
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import VictoryModal from "../components/molecules/VictoryModal";
 import CricketDartBoard from '../components/molecules/CricketDartBoard';
-import { CricketGameState, PlayerCricketScores, CricketTarget, CricketThrow, CricketScoreData, CricketGameStats } from '../types/cricket';
+import { CricketGameState, PlayerCricketScores, CricketThrow, CricketScoreData, CricketGameStats } from '../types/cricket';
 import CricketRules from '../components/molecules/CricketRules';
 
 /**
@@ -32,7 +32,7 @@ import CricketRules from '../components/molecules/CricketRules';
  * et les scores spécifiques au Cricket
  */
 interface ExtendedPlayerGame extends Omit<PlayerGame, 'cricketScores'> {
-  player: Player;
+  player: User;
   currentScore: number;
   cricketScores?: {
     scores: PlayerCricketScores;
@@ -43,12 +43,6 @@ interface ExtendedGameSession extends Omit<GameSession, 'players'> {
   players: ExtendedPlayerGame[];
 }
 
-interface PlayerScore {
-  index: number;
-  playerId: string;
-  username: string;
-  scoresCount: number;
-}
 
 const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,7 +65,6 @@ const GameSession: React.FC = () => {
     gameStatus: 'IN_PROGRESS'
   });
   const [showRules, setShowRules] = useState(false);
-  const [dartHits, setDartHits] = useState<number[]>([]);
 
   // Sauvegarder l'index du joueur actif dans le localStorage
   useEffect(() => {
@@ -552,8 +545,6 @@ const GameSession: React.FC = () => {
   }
 
   const activePlayer = session?.players[activePlayerIndex]?.playerId;
-  const currentPlayerInGame = session?.players.find(p => p.playerId === user?.id);
-  const isCurrentPlayerActive = session?.players[activePlayerIndex]?.playerId === user?.id;
 
   return (
     <div className="container mx-auto px-4 py-8">
