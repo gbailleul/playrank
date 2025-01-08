@@ -1,4 +1,5 @@
 import type { Game, CreateGameDto, AddScoreData, CricketScoreData } from '../types/index';
+import type { CricketGameStats } from '../types/cricket';
 import { dashboardService } from './dashboard';
 import client from './client';
 
@@ -34,8 +35,11 @@ export const gameService = {
     });
   },
 
-  endSession: (gameId: string, sessionId: string, winnerId: string) => {
-    return client.post(`/games/${gameId}/sessions/${sessionId}/end`, { winnerId });
+  endSession: (gameId: string, sessionId: string, winnerId: string, gameStats?: CricketGameStats) => {
+    return client.post(`/games/${gameId}/sessions/${sessionId}/end`, { 
+      winnerId,
+      ...(gameStats && { gameStats })
+    });
   }
 };
 

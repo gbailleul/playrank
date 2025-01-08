@@ -24,7 +24,7 @@ import { gameService } from "../api/services";
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import VictoryModal from "../components/molecules/VictoryModal";
 import CricketDartBoard from '../components/molecules/CricketDartBoard';
-import { CricketGameState, PlayerCricketScores, CricketTarget, CricketThrow, CricketScoreData } from '../types/cricket';
+import { CricketGameState, PlayerCricketScores, CricketTarget, CricketThrow, CricketScoreData, CricketGameStats } from '../types/cricket';
 import CricketRules from '../components/molecules/CricketRules';
 
 /**
@@ -289,7 +289,34 @@ const GameSession: React.FC = () => {
     if (!session) return;
 
     try {
-      await gameService.endSession(session.game.id, session.id, winnerId);
+      // Si c'est une partie de Cricket, on ajoute les statistiques
+      if (session.game.variant === DartVariant.CRICKET) {
+        const gameStats: CricketGameStats = {
+          variant: 'CRICKET',
+          duration: Date.now() - new Date(session.createdAt).getTime(),
+          winner: {
+            id: winnerId,
+            closedTargets: Object.values(gameState.players.find(p => p.id === winnerId)?.scores || {})
+              .filter(score => score.hits >= 3).length,
+            totalPoints: Object.values(gameState.players.find(p => p.id === winnerId)?.scores || {})
+              .reduce((sum, score) => sum + (score.points || 0), 0),
+            totalHits: Object.values(gameState.players.find(p => p.id === winnerId)?.scores || {})
+              .reduce((sum, score) => sum + (score.hits || 0), 0)
+          },
+          players: gameState.players.map(player => ({
+            id: player.id,
+            closedTargets: Object.values(player.scores)
+              .filter(score => score.hits >= 3).length,
+            totalPoints: Object.values(player.scores)
+              .reduce((sum, score) => sum + (score.points || 0), 0),
+            totalHits: Object.values(player.scores)
+              .reduce((sum, score) => sum + (score.hits || 0), 0)
+          }))
+        };
+        await gameService.endSession(session.game.id, session.id, winnerId, gameStats);
+      } else {
+        await gameService.endSession(session.game.id, session.id, winnerId);
+      }
       
       // Trouver le joueur gagnant
       const winningPlayer = session.players.find(p => p.playerId === winnerId);

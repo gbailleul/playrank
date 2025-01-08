@@ -59,7 +59,7 @@ const Leaderboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] bg-fixed p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}TESTETSTETST
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">Classement</h1>
           <div className="flex space-x-4">

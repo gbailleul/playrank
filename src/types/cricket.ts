@@ -30,4 +30,30 @@ export interface CricketGameState {
   currentPlayerIndex: number;
   gameStatus: 'IN_PROGRESS' | 'COMPLETED';
   winner?: string;
+}
+
+export interface CricketGameStats {
+  variant: 'CRICKET';
+  duration: number;
+  winner: {
+    id: string;
+    closedTargets: number;
+    totalPoints: number;
+    totalHits: number;
+  };
+  players: Array<{
+    id: string;
+    closedTargets: number;
+    totalPoints: number;
+    totalHits: number;
+  }>;
+}
+
+export interface CricketPlayerStats {
+  cricketGamesPlayed: number;
+  cricketGamesWon: number;
+  averageClosedTargets: number;
+  averagePointsPerGame: number;
+  bestScore: number;
+  cricketAccuracy: number;
 } 

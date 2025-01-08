@@ -71,8 +71,6 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
   };
 
   const handleRowClick = (game: DashboardGame) => {
-    if (!game.sessions || game.sessions.length === 0) return;
-    const latestSession = game.sessions[game.sessions.length - 1];
     navigate(`/games/${game.id}`);
   };
 
@@ -99,7 +97,6 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
                 <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Partie</th>
                 <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Status</th>
                 <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Joueurs</th>
-                <th className="text-right p-4 text-[var(--text-secondary)] font-medium">Score</th>
                 <th className="text-right p-4 text-[var(--text-secondary)] font-medium">Heure</th>
               </tr>
             </thead>
@@ -137,17 +134,6 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
                           </span>
                           <span className={`text-sm ${player.id === game.winner?.id ? 'text-[var(--status-completed)] font-medium' : 'text-[var(--text-primary)]'}`}>
                             {player.username}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="space-y-1 text-right">
-                      {game.players.map((player) => (
-                        <div key={player.id}>
-                          <span className={`text-sm ${player.id === game.winner?.id ? 'text-[var(--status-completed)] font-medium' : 'text-[var(--text-primary)]'}`}>
-                            {player.currentScore}
                           </span>
                         </div>
                       ))}
