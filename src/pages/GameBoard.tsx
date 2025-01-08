@@ -32,7 +32,7 @@ const GameBoard: React.FC = () => {
   };
 
   const calculateRemainingScore = (player: PlayerGame) => {
-    return player.scores.reduce((sum: number, score: Score) => sum + score.value, 0);
+    return player.scores.reduce((sum: number, score: Score) => sum + score.points, 0);
   };
 
   const isValidScore = (score: number) => {
@@ -120,7 +120,7 @@ const GameBoard: React.FC = () => {
                   <p className="text-2xl font-bold">{calculateRemainingScore(player)}</p>
                   <div className="text-sm space-y-1">
                     {player.scores.map((score: Score, idx: number) => (
-                      <p key={idx}>{score.value}</p>
+                      <p key={idx}>{score.points}</p>
                     ))}
                   </div>
                 </div>
