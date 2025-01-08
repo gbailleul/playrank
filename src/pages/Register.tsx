@@ -23,6 +23,7 @@ const Register: React.FC = () => {
   const [generalError, setGeneralError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -105,8 +106,10 @@ const Register: React.FC = () => {
     e.preventDefault();
     setGeneralError('');
     setErrors({});
+    setIsLoading(true);
 
     if (!validateForm()) {
+      setIsLoading(false);
       return;
     }
 
@@ -123,6 +126,8 @@ const Register: React.FC = () => {
       } else {
         setGeneralError('Registration failed. Please try again.');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 

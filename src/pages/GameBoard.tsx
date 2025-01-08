@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import type { Game, GameSession, PlayerGame } from '../types';
+import type { Game, GameSession, PlayerGame, Score } from '../types/index';
 
 const GameBoard: React.FC = () => {
   const { id } = useParams();
@@ -32,8 +32,7 @@ const GameBoard: React.FC = () => {
   };
 
   const calculateRemainingScore = (player: PlayerGame) => {
-    const totalScore = player.scores.reduce((sum, score) => sum + score.value, 0);
-    return game ? game.maxScore - totalScore : 0;
+    return player.scores.reduce((sum: number, score: Score) => sum + score.value, 0);
   };
 
   const isValidScore = (score: number) => {
@@ -120,7 +119,7 @@ const GameBoard: React.FC = () => {
                   </h3>
                   <p className="text-2xl font-bold">{calculateRemainingScore(player)}</p>
                   <div className="text-sm space-y-1">
-                    {player.scores.map((score, idx) => (
+                    {player.scores.map((score: Score, idx: number) => (
                       <p key={idx}>{score.value}</p>
                     ))}
                   </div>

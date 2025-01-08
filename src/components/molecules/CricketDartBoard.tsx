@@ -294,7 +294,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         {sections.map((score, index) => {
           const section = createSection(index, score);
           return (
-            <g key={score} data-testid={`target-${score}`}>
+            <g key={score} data-testid={`target-${score}`} onClick={(e) => handleHit(score, 1, e)}>
               {section}
             </g>
           );

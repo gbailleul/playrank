@@ -26,5 +26,15 @@ export const auth = {
   logout: () => {
     localStorage.removeItem('token');
     return client.post('/auth/logout');
-  }
+  },
+
+  updateAvatar: (avatarData: string | File) => {
+    const formData = new FormData();
+    formData.append('avatar', avatarData);
+    return client.post<{ avatarUrl: string }>('/users/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 }; 

@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUserAvatar: (avatarData: string | File) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,8 +77,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserAvatar = async (avatarData: string | File) => {
+    try {
+      const { data } = await auth.updateAvatar(avatarData);
+      setUser(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, logout, updateUserAvatar }}>
       {children}
     </AuthContext.Provider>
   );

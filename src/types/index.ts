@@ -1,6 +1,22 @@
 import { GameType, DartVariant, GameStatus } from './game';
 import { PlayerCricketScores } from './cricket';
 
+export interface UserStatistics {
+  id: string;
+  userId: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  totalDartsThrown: number;
+  averageDartsPerGame: number;
+  highestScore: number;
+  totalDoubles: number;
+  totalTriples: number;
+  accuracy: number;
+  averagePointsPerDart: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -12,6 +28,16 @@ export interface User {
   status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
   createdAt: Date;
   updatedAt: Date;
+  statistics?: UserStatistics;
+  playerGames?: PlayerGame[];
+  recentActivity?: UserActivity[];
+}
+
+export interface UserActivity {
+  id: string;
+  type: 'GAME_PLAYED' | 'ACHIEVEMENT_UNLOCKED' | 'RANK_CHANGED';
+  description: string;
+  timestamp: Date;
 }
 
 export interface Game {
@@ -114,6 +140,30 @@ export interface LeaderboardEntry {
 export interface LeaderboardResponse {
   entries: LeaderboardEntry[];
   userRank?: LeaderboardEntry;
+}
+
+export interface DashboardResponse {
+  games: DashboardGame[];
+  globalStats: {
+    averageAccuracy: number;
+    averagePointsPerDart: number;
+    averageGamesPerPlayer: number;
+    totalDartsThrown: number;
+    totalDoubles: number;
+    totalTriples: number;
+  };
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+  topPlayers: {
+    id: string;
+    username: string;
+    avatarUrl?: string;
+    statistics: UserStatistics;
+  }[];
 }
 
 export { GameType, DartVariant, GameStatus };
