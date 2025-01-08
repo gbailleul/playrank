@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
@@ -33,6 +33,15 @@ const Login: React.FC = () => {
           <h2 className="mt-6 text-center text-3xl game-title">
             Connexion à votre compte
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-400">
+            Ou{' '}
+            <Link
+              to="/register"
+              className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              créez un nouveau compte
+            </Link>
+          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
@@ -72,6 +81,17 @@ const Login: React.FC = () => {
                 className="game-input w-full rounded-b-md rounded-t-none"
                 placeholder="Mot de passe"
               />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <div className="text-sm">
+              <Link
+                to="/forgot-password"
+                className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+              >
+                Mot de passe oublié ?
+              </Link>
             </div>
           </div>
 

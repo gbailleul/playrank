@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import InputField from '../components/ui/InputField';
 
 interface ValidationErrors {
+  username?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -13,6 +14,7 @@ interface ValidationErrors {
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
+    username: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -43,6 +45,18 @@ const Register: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
+
+    // Username validation
+    if (!formData.username) {
+      newErrors.username = 'Le pseudo est requis';
+      isValid = false;
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Le pseudo doit contenir au moins 3 caractères';
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.username)) {
+      newErrors.username = 'Le pseudo ne peut contenir que des lettres, chiffres, tirets et underscores';
+      isValid = false;
+    }
 
     // First Name validation
     if (!formData.firstName) {
@@ -114,17 +128,20 @@ const Register: React.FC = () => {
     }
 
     try {
-      // Generate a username from firstName and lastName
-      const username = `${formData.firstName.toLowerCase()}_${formData.lastName.toLowerCase()}`.replace(/\s+/g, '');
-      await register(username, formData.lastName, formData.email, formData.password);
+      await register(formData.username, formData.firstName, formData.lastName, formData.email, formData.password);
       navigate('/');
     } catch (err: any) {
-      if (err.errors) {
-        setErrors(err.errors);
+      if (err.response?.data?.errors) {
+        // Erreurs de validation du backend
+        setErrors(err.response.data.errors);
+      } else if (err.response?.data?.message) {
+        // Message d'erreur général du backend
+        setGeneralError(err.response.data.message);
       } else if (err.message) {
+        // Message d'erreur de l'API
         setGeneralError(err.message);
       } else {
-        setGeneralError('Registration failed. Please try again.');
+        setGeneralError('Une erreur est survenue lors de l\'inscription. Veuillez réessayer.');
       }
     } finally {
       setIsLoading(false);
@@ -147,6 +164,18 @@ const Register: React.FC = () => {
           )}
 
           <div className="rounded-md shadow-sm space-y-4">
+            <InputField
+              id="username"
+              name="username"
+              label="Pseudo"
+              type="text"
+              value={formData.username}
+              onChange={handleInputChange}
+              error={errors.username}
+              placeholder="Choisissez votre pseudo"
+              autoComplete="username"
+            />
+
             <InputField
               id="firstName"
               name="firstName"
@@ -223,7 +252,7 @@ const Register: React.FC = () => {
               Vous avez déjà un compte ?{' '}
               <Link
                 to="/login"
-                className="font-medium text-[var(--gold)] hover:text-[var(--gold-dark)]"
+                className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
               >
                 Se connecter
               </Link>

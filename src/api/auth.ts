@@ -14,8 +14,9 @@ export const auth = {
     return client.post<{ user: User; token: string }>('/auth/login', { email, password });
   },
 
-  register: (firstName: string, lastName: string, email: string, password: string) => {
+  register: (username: string, firstName: string, lastName: string, email: string, password: string) => {
     return client.post<{ user: User; token: string }>('/auth/register', {
+      username,
       firstName,
       lastName,
       email,
