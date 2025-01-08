@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
 
     steps:
     - uses: actions/checkout@v3
@@ -18,23 +21,16 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
+        cache-dependency-path: package-lock.json
 
     - name: Install dependencies
-      run: |
-        cd frontend
-        npm ci
+      run: npm ci
 
     - name: Type check
-      run: |
-        cd frontend
-        npm run type-check || true
+      run: npm run type-check || true
 
     - name: Lint
-      run: |
-        cd frontend
-        npm run lint || true
+      run: npm run lint || true
 
     - name: Build
-      run: |
-        cd frontend
-        npm run build
+      run: npm run build
