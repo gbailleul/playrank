@@ -61,7 +61,7 @@ const VictoryModal: React.FC<VictoryModalProps> = ({ winner, onClose }) => {
         </p>
         <button
           onClick={onClose}
-          className="px-6 py-2 bg-[var(--neon-primary)] text-white rounded-lg hover:bg-[var(--neon-primary-hover)] transition-colors"
+          className="game-button"
         >
           Fermer
         </button>

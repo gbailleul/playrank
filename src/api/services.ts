@@ -16,11 +16,7 @@ export const gameService = {
   },
 
   getSession: (id: string) => {
-    return client.get<Game>(`/games/${id}`, {
-      params: {
-        include: 'players.cricketScores,players.player,players.scores'
-      }
-    });
+    return client.get<Game>(`/games/${id}`);
   },
 
   createGameSession: (gameId: string, data: { players: string[] }) => {

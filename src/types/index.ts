@@ -48,8 +48,10 @@ export interface AddScoreData {
 
 export interface CricketScoreData {
   playerId: string;
-  target: number;
-  multiplier: number;
+  throws: Array<{
+    target: number;
+    multiplier: number;
+  }>;
   turnNumber: number;
 }
 

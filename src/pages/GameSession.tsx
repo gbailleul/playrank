@@ -1,3 +1,19 @@
+/**
+ * GameSession.tsx
+ * Composant principal gérant une session de jeu de fléchettes.
+ * 
+ * Fonctionnalités :
+ * - Gestion des différentes variantes de jeu (301, 501, Cricket)
+ * - Suivi des scores et des tours de jeu
+ * - Interaction avec le backend via WebSocket
+ * - Affichage des statistiques en temps réel
+ * 
+ * Structure des données :
+ * - session: Données complètes de la session de jeu
+ * - gameState: État spécifique pour le Cricket (zones fermées, points)
+ * - dartHits: Suivi des impacts de fléchettes du tour en cours
+ */
+
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -7,10 +23,14 @@ import DartBoard from "../components/molecules/DartBoard";
 import { gameService } from "../api/services";
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import VictoryModal from "../components/molecules/VictoryModal";
-import CricketDartBoard from '../components/CricketDartBoard';
-import { CricketGameState, PlayerCricketScores, CricketTarget } from '../types/cricket';
-import CricketRules from '../components/CricketRules';
+import CricketDartBoard from '../components/molecules/CricketDartBoard';
+import { CricketGameState, PlayerCricketScores, CricketTarget, CricketThrow, CricketScoreData } from '../types/cricket';
+import CricketRules from '../components/molecules/CricketRules';
 
+/**
+ * Interface étendant PlayerGame pour inclure les données du joueur
+ * et les scores spécifiques au Cricket
+ */
 interface ExtendedPlayerGame extends Omit<PlayerGame, 'cricketScores'> {
   player: Player;
   currentScore: number;
@@ -60,12 +80,16 @@ const GameSession: React.FC = () => {
     }
   }, [activePlayerIndex, id]);
 
-  // Fetch game session data
+  /**
+   * Récupère les données de la session depuis le backend
+   * Met à jour le gameState pour le Cricket avec les zones fermées
+   */
   const fetchSession = useCallback(async () => {
     if (!id) return;
     
     try {
       const { data } = await gameService.getSession(id);
+      console.log('Game data:', data); // Debug log
       const gameSession = data.sessions?.[data.sessions.length - 1];
       if (gameSession) {
         // Transform the session data to include player and currentScore
@@ -288,77 +312,92 @@ const GameSession: React.FC = () => {
     }
   };
 
-  const handleCricketScore = async (target: number, multiplier: number) => {
+  /**
+   * Gère l'ajout d'un score en Cricket
+   * @param throws - Tableau des lancers de fléchettes
+   */
+  const handleCricketScore = async (throws: CricketThrow[]) => {
     if (!session) return;
 
     const currentPlayer = session.players[activePlayerIndex];
     
     try {
-      const scoreData = {
+      const scoreData: CricketScoreData = {
         playerId: currentPlayer.playerId,
-        target,
-        multiplier,
+        throws: throws,
         turnNumber: currentPlayer.scores?.length || 0
       };
 
-      console.log('Sending score data:', scoreData);
+      console.log('=== GameSession - Envoi des scores au backend ===');
+      console.log('Données envoyées:', scoreData);
       const { data } = await gameService.addCricketScore(session.game.id, session.id, scoreData);
-      console.log('Received response:', data);
+      console.log('Réponse du backend:', data);
 
       if (data.cricketScore) {
-        // Get the current scores for all players
-        const defaultScores: PlayerCricketScores = {
-          15: { hits: 0, points: 0 },
-          16: { hits: 0, points: 0 },
-          17: { hits: 0, points: 0 },
-          18: { hits: 0, points: 0 },
-          19: { hits: 0, points: 0 },
-          20: { hits: 0, points: 0 },
-          25: { hits: 0, points: 0 }
-        };
+        console.log('=== GameSession - Mise à jour du state ===');
+        console.log('État actuel:', gameState);
         
-        // Update the scores for the current player
-        const updatedScores = {
-          ...gameState.players.find(p => p.id === currentPlayer.playerId)?.scores || defaultScores,
-          [target]: {
-            hits: Math.min(
-              (gameState.players.find(p => p.id === currentPlayer.playerId)?.scores[target as CricketTarget]?.hits || 0) + data.cricketScore.currentThrow.hits,
-              3 // Maximum de 3 hits par cible
-            ),
-            points: (gameState.players.find(p => p.id === currentPlayer.playerId)?.scores[target as CricketTarget]?.points || 0) + data.cricketScore.currentThrow.points
-          }
-        };
-
-        // Update the game state
+        // Mise à jour du gameState avec les scores complets
         setGameState(prev => {
           const updatedPlayers = prev.players.map(p => {
             if (p.id === currentPlayer.playerId) {
-              return {
+              const scores = data.cricketScore.scores as PlayerCricketScores;
+              const totalPoints = Object.values(scores).reduce(
+                (sum, score) => sum + (score.points || 0),
+                0
+              );
+              
+              const newPlayerState = {
                 ...p,
-                scores: updatedScores,
-                totalPoints: Object.values(updatedScores).reduce(
-                  (sum, score) => sum + score.points,
-                  0
-                )
+                scores,
+                totalPoints
               };
+              console.log('Nouveau state du joueur:', newPlayerState);
+              return newPlayerState;
             }
             return p;
           });
 
-          // Vérifier si le joueur a gagné
-          const currentPlayerScores = updatedScores;
-          const allTargetsClosed = Object.values(currentPlayerScores).every(score => score.hits >= 3);
-          const currentPlayerTotalPoints = Object.values(currentPlayerScores).reduce((sum, score) => sum + score.points, 0);
+          // Vérification des conditions de victoire
+          const scores = data.cricketScore.scores as PlayerCricketScores;
+          const allTargetsClosed = Object.values(scores).every(score => score.hits >= 3);
+          console.log('Toutes les cibles fermées:', allTargetsClosed);
+          
+          const currentPlayerTotalPoints = Object.values(scores).reduce(
+            (sum, score) => sum + (score.points || 0),
+            0
+          );
+          console.log('Points totaux du joueur:', currentPlayerTotalPoints);
+          
           const otherPlayersTotalPoints = updatedPlayers
             .filter(p => p.id !== currentPlayer.playerId)
-            .map(p => Object.values(p.scores).reduce((sum, score) => sum + score.points, 0));
+            .map(p => Object.values(p.scores as PlayerCricketScores)
+              .reduce((sum, score) => sum + (score.points || 0), 0)
+            );
+          console.log('Points des autres joueurs:', otherPlayersTotalPoints);
+          
           const hasHighestScore = otherPlayersTotalPoints.every(points => points <= currentPlayerTotalPoints);
+          console.log('A le plus haut score:', hasHighestScore);
 
           if (allTargetsClosed && hasHighestScore) {
+            console.log('=== Victoire détectée ===');
+            // Trouver le joueur gagnant
+            const winningPlayer = session.players.find(p => p.playerId === currentPlayer.playerId);
+            if (winningPlayer) {
+              setWinner({
+                username: winningPlayer.player.username,
+                id: currentPlayer.playerId
+              });
+              setShowVictoryModal(true);
+
+              // Envoyer l'information de victoire au backend
+              handleEndGame(currentPlayer.playerId);
+            }
+            
             return {
               ...prev,
               players: updatedPlayers,
-              gameStatus: 'COMPLETED',
+              gameStatus: 'COMPLETED' as const,
               winner: currentPlayer.playerId
             };
           }
@@ -369,10 +408,10 @@ const GameSession: React.FC = () => {
           };
         });
 
-        // Update the session
+        // Mise à jour de la session
         setSession(prev => {
           if (!prev) return prev;
-          return {
+          const updatedSession: ExtendedGameSession = {
             ...prev,
             players: prev.players.map(p => {
               if (p.playerId === currentPlayer.playerId) {
@@ -380,32 +419,33 @@ const GameSession: React.FC = () => {
                   ...p,
                   cricketScores: {
                     ...p.cricketScores,
-                    scores: updatedScores
+                    scores: data.cricketScore.scores
                   }
                 };
               }
               return p;
             }),
-            status: gameState.gameStatus === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
+            status: gameState.gameStatus,
             winnerId: gameState.winner
           };
+          console.log('Session mise à jour:', updatedSession);
+          return updatedSession;
         });
 
-        // Si c'est le troisième lancer ou si le jeu est terminé, passer au joueur suivant
-        if (dartHits.length === 2 || gameState.gameStatus === 'COMPLETED') {
-          const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
-          setActivePlayerIndex(nextPlayerIndex);
-          setDartHits([]);
-
-          // Si le jeu est terminé, envoyer la requête pour terminer la session
-          if (gameState.gameStatus === 'COMPLETED' && gameState.winner) {
-            try {
-              await gameService.endSession(session.game.id, session.id, gameState.winner);
-            } catch (error) {
-              console.error('Error ending session:', error);
-            }
+        // Gestion de la fin du tour
+        if (gameState.gameStatus === 'COMPLETED' && gameState.winner) {
+          try {
+            await gameService.endSession(session.game.id, session.id, gameState.winner);
+            console.log('Session terminée avec succès');
+          } catch (error) {
+            console.error('Error ending session:', error);
           }
         }
+
+        // Passage au joueur suivant
+        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+        console.log('Passage au joueur suivant:', nextPlayerIndex);
+        setActivePlayerIndex(nextPlayerIndex);
       }
     } catch (error) {
       console.error("Error adding cricket score:", error);
@@ -493,7 +533,10 @@ const GameSession: React.FC = () => {
       {showVictoryModal && winner && (
         <VictoryModal
           winner={winner}
-          onClose={() => setShowVictoryModal(false)}
+          onClose={() => {
+            setShowVictoryModal(false);
+            navigate('/dashboard');
+          }}
         />
       )}
 
@@ -561,34 +604,66 @@ const GameSession: React.FC = () => {
                       {playerGame.player.username}
                     </span>
                   </div>
-                  <span className="text-2xl font-bold text-[var(--neon-primary)]">
-                    {playerGame.currentScore}
-                  </span>
+                  {session.game.variant !== DartVariant.CRICKET && (
+                    <span className="text-2xl font-bold text-[var(--neon-primary)]">
+                      {playerGame.currentScore}
+                    </span>
+                  )}
                 </div>
 
                 {/* Statistiques du joueur */}
                 <div className="grid grid-cols-3 gap-4 mt-2">
-                  <div className="text-center">
-                    <div className="text-sm text-[var(--text-secondary)]">Fléchettes</div>
-                    <div className="text-lg font-medium text-[var(--text-primary)]">
-                      {(playerGame.scores?.length || 0) * 3}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm text-[var(--text-secondary)]">Précision</div>
-                    <div className="text-lg font-medium text-[var(--text-primary)]">
-                      {Math.round(
-                        ((playerGame.scores?.filter((s: Score) => s.points > 40).length || 0) /
-                        (playerGame.scores?.length || 1)) * 100
-                      )}%
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm text-[var(--text-secondary)]">Dernier score</div>
-                    <div className="text-lg font-medium text-[var(--text-primary)]">
-                      {playerGame.scores?.[playerGame.scores.length - 1]?.points || 0}
-                    </div>
-                  </div>
+                  {session.game.variant === DartVariant.CRICKET ? (
+                    <>
+                      <div className="text-center">
+                        <div className="text-sm text-[var(--text-secondary)]">Zones fermées</div>
+                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                          {Object.values(playerGame.cricketScores?.scores || {})
+                            .filter(score => score.hits >= 3)
+                            .length}
+                          /7
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-[var(--text-secondary)]">Points</div>
+                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                          {Object.values(playerGame.cricketScores?.scores || {})
+                            .reduce((sum, score) => sum + (score.points || 0), 0)}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-[var(--text-secondary)]">Touches</div>
+                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                          {Object.values(playerGame.cricketScores?.scores || {})
+                            .reduce((sum, score) => sum + (score.hits || 0), 0)}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center">
+                        <div className="text-sm text-[var(--text-secondary)]">Fléchettes</div>
+                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                          {(playerGame.scores?.length || 0) * 3}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-[var(--text-secondary)]">Précision</div>
+                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                          {Math.round(
+                            ((playerGame.scores?.filter((s: Score) => s.points > 40).length || 0) /
+                            (playerGame.scores?.length || 1)) * 100
+                          )}%
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-[var(--text-secondary)]">Dernier score</div>
+                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                          {playerGame.scores?.[playerGame.scores.length - 1]?.points || 0}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

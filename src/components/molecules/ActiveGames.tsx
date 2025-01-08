@@ -1,7 +1,20 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { GameStatus } from '../../types/index';
-import type { DashboardGame } from '../../types/index';
+import type { Player as BasePlayer } from '../../types/index';
+
+interface Player extends BasePlayer {
+  currentScore?: number;
+}
+
+interface DashboardGame {
+  id: string;
+  name: string;
+  status: GameStatus;
+  winner?: Player;
+  players: Player[];
+  startedAt?: Date;
+}
 
 interface ActiveGamesProps {
   games: DashboardGame[];
@@ -15,6 +28,8 @@ interface ActiveGamesProps {
 }
 
 const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChange }) => {
+  const navigate = useNavigate();
+
   const formatTime = (date?: Date) => {
     if (!date) return '';
     return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -48,6 +63,19 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
     }
   };
 
+  const handleGameClick = (game: DashboardGame) => {
+    console.log('game', game);
+    if (game.status === GameStatus.IN_PROGRESS && !game.winner) {
+      navigate(`/games/${game.id}`);
+    }
+  };
+
+  const handleRowClick = (game: DashboardGame) => {
+    if (!game.sessions || game.sessions.length === 0) return;
+    const latestSession = game.sessions[game.sessions.length - 1];
+    navigate(`/games/${game.id}`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -79,15 +107,21 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
               {games.map((game) => (
                 <tr 
                   key={game.id}
-                  className="hover:bg-white/5 transition-colors"
+                  className={`hover:bg-white/5 transition-colors ${
+                    game.status === GameStatus.IN_PROGRESS && !game.winner ? 'cursor-pointer' : ''
+                  }`}
+                  onClick={() => handleGameClick(game)}
                 >
                   <td className="p-4">
-                    <Link 
-                      to={`/games/${game.id}`}
-                      className="text-[var(--text-primary)] hover:text-[var(--accent-blue)] transition-colors"
-                    >
-                      {game.name}
-                    </Link>
+                    {game.status === GameStatus.IN_PROGRESS && !game.winner ? (
+                      <span className="text-[var(--text-primary)] hover:text-[var(--accent-blue)] transition-colors">
+                        {game.name}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--text-primary)]">
+                        {game.name}
+                      </span>
+                    )}
                   </td>
                   <td className="p-4">
                     <span className={`font-medium ${getStatusStyle(game.status, !!game.winner)}`}>

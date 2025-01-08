@@ -19,6 +19,7 @@ const Dashboard: React.FC = () => {
     try {
       setIsLoading(true);
       const { data } = await dashboardService.getDashboard(page);
+      console.log('data dashboard', data);
       setDashboardData(data);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
