@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { useNavigate } from 'react-router-dom';
 
 interface VictoryModalProps {
   winner: {
@@ -11,8 +10,6 @@ interface VictoryModalProps {
 }
 
 const VictoryModal: React.FC<VictoryModalProps> = ({ winner, onClose }) => {
-  const navigate = useNavigate();
-
   useEffect(() => {
     // Lance les confettis
     const duration = 3 * 1000;

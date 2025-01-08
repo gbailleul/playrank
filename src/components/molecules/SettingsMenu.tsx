@@ -29,7 +29,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ className = '' }) => {
   return (
     <Dropdown 
       trigger={trigger}
-      className="w-72"
+      className={`w-72 ${className}`}
     >
       <div className="py-1">
         <div className="px-4 py-2 text-sm text-[var(--text-secondary)] border-b border-[var(--border-subtle)]">

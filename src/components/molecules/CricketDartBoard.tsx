@@ -73,11 +73,17 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
    * @param event - Événement de clic
    */
   const handleHit = (target: number, multiplier: number, event: React.MouseEvent<SVGElement>) => {
-    if (dartHits.length >= 3) return; // Maximum 3 darts per turn
-    
-    const rect = (event.target as SVGElement).getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    if (dartHits.length >= 3) return;
+
+    const svg = event.currentTarget.closest('svg');
+    if (!svg) return;
+
+    const svgRect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+
+    // Calcul des coordonnées normalisées par rapport au SVG et au viewBox
+    const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
+    const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
     
     setDartHits(prev => [...prev, { target, multiplier, x, y }]);
   };
@@ -294,7 +300,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         {sections.map((score, index) => {
           const section = createSection(index, score);
           return (
-            <g key={score} data-testid={`target-${score}`} onClick={(e) => handleHit(score, 1, e)}>
+            <g key={score} data-testid={`target-${score}`}>
               {section}
             </g>
           );
@@ -356,7 +362,6 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
       <div className="mt-4 flex justify-center items-center gap-4">
         {[0, 1, 2].map((index) => {
           const hit = index < dartHits.length ? dartHits[index] : null;
-          const score = hit ? (hit.target * hit.multiplier) : 0;
           
           return (
             <div 

@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import AvatarSelector from './AvatarSelector';
 import Dropdown, { DropdownItem } from '../atoms/Dropdown';
 import StatusBadge from '../atoms/StatusBadge';
-import type { User } from '../../types';
+import type { User } from '../../types/index';
 import { FiLogOut } from 'react-icons/fi';
 
 interface UserMenuProps {
@@ -22,9 +22,12 @@ const UserMenu: React.FC<UserMenuProps> = ({ className = '' }) => {
     navigate('/login', { replace: true });
   };
 
-  const handleAvatarChange = async (avatarUrl: string) => {
+  const handleAvatarChange = async (avatarData: string | File) => {
     try {
-      await updateUserAvatar(avatarUrl);
+      if (typeof avatarData === 'string') {
+        await updateUserAvatar(avatarData);
+      }
+      // Gérer le cas File si nécessaire
     } catch (error) {
       console.error('Failed to update avatar:', error);
     }

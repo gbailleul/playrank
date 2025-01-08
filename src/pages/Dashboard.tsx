@@ -144,7 +144,18 @@ const Dashboard: React.FC = () => {
         {/* Top Players Section */}
         {dashboardData?.topPlayers && (
           <div className="mb-8">
-            <TopPlayers players={dashboardData.topPlayers} />
+            <TopPlayers 
+              players={dashboardData.topPlayers.map(player => ({
+                ...player,
+                statistics: {
+                  gamesWon: player.statistics.gamesWon,
+                  winRate: player.statistics.gamesPlayed > 0 
+                    ? (player.statistics.gamesWon / player.statistics.gamesPlayed) * 100 
+                    : 0,
+                  averagePointsPerDart: player.statistics.averagePointsPerDart
+                }
+              }))} 
+            />
           </div>
         )}
       </div>
