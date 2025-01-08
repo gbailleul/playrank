@@ -21,7 +21,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: HomeIcon },
-    { name: 'Games', href: '/games', icon: TrophyIcon },
     { name: 'Players', href: '/players', icon: UserGroupIcon },
     { name: 'Statistics', href: '/statistics', icon: ChartBarIcon },
   ];

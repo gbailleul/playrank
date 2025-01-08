@@ -15,7 +15,6 @@ const Navigation: React.FC<NavigationProps> = ({
 
   const links = [
     { to: '/', label: 'Dashboard' },
-    { to: '/games', label: 'Games' },
     { to: '/leaderboard', label: 'Leaderboard' },
     ...(user?.role === 'ADMIN' ? [{ to: '/test-connection', label: 'API Test' }] : []),
   ];
