@@ -69,14 +69,18 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
     if (!user) return;
     
     const isPlayerInGame = game.players.some(player => player.id === user.id);
-    if (game.status === GameStatus.IN_PROGRESS && !game.winner && isPlayerInGame) {
+    const isAdmin = user.role === 'ADMIN';
+    
+    if (game.status === GameStatus.IN_PROGRESS && !game.winner && (isPlayerInGame || isAdmin)) {
       navigate(`/games/${game.id}`);
     }
   };
 
   const canJoinGame = (game: DashboardGame): boolean => {
     if (!user) return false;
-    return game.status === GameStatus.IN_PROGRESS && !game.winner && game.players.some(player => player.id === user.id);
+    const isPlayerInGame = game.players.some(player => player.id === user.id);
+    const isAdmin = user.role === 'ADMIN';
+    return game.status === GameStatus.IN_PROGRESS && !game.winner && (isPlayerInGame || isAdmin);
   };
 
   return (
