@@ -87,7 +87,13 @@ const Router = () => {
         }
       />
 
-      {/* Protected routes with MainLayout */}
+      {/* Public Dashboard */}
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
+      </Route>
+
+      {/* Protected routes */}
       <Route
         path="/"
         element={
@@ -96,12 +102,10 @@ const Router = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Dashboard />} />
         <Route path="profile" element={<Profile />} />
         <Route path="test-connection" element={<TestConnection />} />
         <Route path="games/new" element={<CreateGame />} />
         <Route path="games/:id" element={<GameSession />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
       </Route>
 
       {/* Catch all route */}
