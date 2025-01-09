@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navigation from '../molecules/Navigation';
 import MobileMenu from '../molecules/MobileMenu';
-import UserMenu from '../molecules/UserMenu';
+import AuthButton from '../molecules/AuthButton';
 import SettingsMenu from '../molecules/SettingsMenu';
 
 const Navbar: React.FC = () => {
@@ -22,7 +22,7 @@ const Navbar: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <UserMenu />
+            <AuthButton />
             <SettingsMenu />
             <MobileMenu 
               isOpen={isMobileMenuOpen}
