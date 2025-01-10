@@ -152,28 +152,89 @@ const GameSession: React.FC = () => {
   useEffect(() => {
     if (!session?.gameId) return;
 
-    const wsUrl = `ws://localhost:8000/games`;
-    const websocket = new WebSocket(wsUrl);
+    let wsUrl: string;
     
-    websocket.onopen = () => {
-      websocket.send(JSON.stringify({
-        type: 'join_game',
-        gameId: session.game.id,
-        playerId: user?.id
-      }));
-    };
-    
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'score_update' || data.type === 'game_status_update') {
-        fetchSession();
+    // En production
+    if (import.meta.env.PROD) {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const prodWsUrl = import.meta.env.VITE_API_URL?.replace(/^https?:\/\//, '');
+      if (!prodWsUrl) {
+        console.error('VITE_API_URL is not defined in production');
+        return;
       }
+      wsUrl = `${wsProtocol}//${prodWsUrl}/games`;
+    } else {
+      // En développement
+      wsUrl = 'ws://localhost:8000/games';
+    }
+      
+    console.log('Tentative de connexion WebSocket à:', wsUrl);
+    
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 3;
+    
+    const connectWebSocket = () => {
+      console.log('Création d\'une nouvelle connexion WebSocket...');
+      const websocket = new WebSocket(wsUrl);
+      
+      websocket.onopen = () => {
+        console.log('WebSocket connecté avec succès');
+        reconnectAttempts = 0; // Réinitialiser le compteur après une connexion réussie
+        
+        // Envoyer les informations de connexion
+        const joinData = {
+          type: 'join_game',
+          gameId: session.game.id,
+          playerId: user?.id
+        };
+        console.log('Envoi des données de connexion:', joinData);
+        websocket.send(JSON.stringify(joinData));
+      };
+      
+      websocket.onerror = (error) => {
+        console.error('Erreur WebSocket:', error);
+      };
+
+      websocket.onclose = (event) => {
+        console.log('WebSocket fermé:', event.code, event.reason);
+        
+        // Tentative de reconnexion si ce n'est pas une fermeture normale
+        if (event.code !== 1000 && event.code !== 1001) {
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            console.log(`Tentative de reconnexion ${reconnectAttempts}/${maxReconnectAttempts}...`);
+            setTimeout(connectWebSocket, 3000); // Attendre 3 secondes avant de réessayer
+          } else {
+            console.error('Nombre maximum de tentatives de reconnexion atteint');
+          }
+        }
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          console.log('Message WebSocket reçu:', event.data);
+          const data = JSON.parse(event.data);
+          if (data.type === 'score_update' || data.type === 'game_status_update') {
+            console.log('Mise à jour du score reçue, actualisation de la session...');
+            fetchSession();
+          }
+        } catch (error) {
+          console.error('Erreur lors du traitement du message WebSocket:', error);
+        }
+      };
+
+      setWs(websocket);
+      
+      return websocket;
     };
 
-    setWs(websocket);
+    const websocket = connectWebSocket();
 
     return () => {
-      websocket.close();
+      console.log('Nettoyage de la connexion WebSocket');
+      if (websocket.readyState === WebSocket.OPEN) {
+        websocket.close(1000, 'Fermeture normale');
+      }
     };
   }, [session?.gameId, user?.id, fetchSession]);
 
