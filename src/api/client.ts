@@ -35,7 +35,7 @@ client.interceptors.response.use(
   async (error) => {
     const { config, response } = error;
     
-    // Si pas de config ou plus de retries disponibles, rejeter l'erreur
+    // Si pas de config ou plus de retries disponibles
     if (!config || !config.retries) {
       console.error('API Error:', error);
       
@@ -47,11 +47,15 @@ client.interceptors.response.use(
       const { status, data } = response;
       switch (status) {
         case 401:
-          // Si le token est expiré ou invalide, supprimer le token et rediriger
-          if (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_TOKEN') {
+          // Si le token est expiré ou invalide
+          if (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_TOKEN' || data.code === 'INVALID_CREDENTIALS') {
             console.log('Token invalid or expired, redirecting to login');
+            // Supprimer le token
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            // Rediriger vers la page de login avec le chemin de retour
+            const returnPath = window.location.pathname;
+            window.location.href = `/login?returnTo=${encodeURIComponent(returnPath)}`;
+            return Promise.reject(error);
           }
           break;
         case 403:

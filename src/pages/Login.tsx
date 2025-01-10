@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
@@ -9,6 +9,8 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,10 +19,14 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/');
+      navigate(returnTo);
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Échec de la connexion');
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Échec de la connexion. Veuillez vérifier vos identifiants.');
+      }
     } finally {
       setIsLoading(false);
     }
