@@ -574,7 +574,7 @@ const GameSession: React.FC = () => {
   const activePlayer = session?.players[activePlayerIndex]?.playerId;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-7xl">
       {showVictoryModal && winner && (
         <VictoryModal
           winner={winner}
@@ -587,36 +587,36 @@ const GameSession: React.FC = () => {
 
       {/* Message informatif */}
       {infoMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-blue-900 text-[var(--text-primary)] px-6 py-3 rounded-lg shadow-lg border border-[var(--neon-primary)] relative">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[90%] sm:w-auto">
+          <div className="bg-blue-900 text-[var(--text-primary)] px-3 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg border border-[var(--neon-primary)] relative text-sm sm:text-base">
             {infoMessage}
             <button
               onClick={() => setInfoMessage('')}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--glass-bg)] border border-[var(--neon-primary)] flex items-center justify-center hover:bg-[var(--glass-bg-hover)]"
+              className="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--glass-bg)] border border-[var(--neon-primary)] flex items-center justify-center hover:bg-[var(--glass-bg-hover)]"
             >
-              <XCircleIcon className="w-4 h-4 text-[var(--text-primary)]" />
+              <XCircleIcon className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--text-primary)]" />
             </button>
           </div>
         </div>
       )}
 
       {/* Titre de la session */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-4 sm:mb-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-[var(--text-primary)]">
           {session.game.name}
         </h1>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-2 sm:gap-4">
           {session.game.variant === DartVariant.CRICKET && (
             <button
               onClick={() => setShowRules(true)}
-              className="px-4 py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)]"
+              className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)] text-sm sm:text-base"
             >
               Règles du jeu
             </button>
           )}
           <Link
             to="/games"
-            className="px-4 py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)]"
+            className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)] text-sm sm:text-base"
           >
             Retour aux jeux
           </Link>
@@ -629,50 +629,50 @@ const GameSession: React.FC = () => {
       )}
 
       {/* Contenu principal */}
-      <div className="space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-4 sm:space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Tableau des scores */}
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-4 order-2 lg:order-1">
             {session.players.map((playerGame: ExtendedPlayerGame, index: number) => (
               <div 
                 key={playerGame.id}
-                className={`relative p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
+                className={`relative p-2 sm:p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
                   index === activePlayerIndex ? 'ring-2 ring-[var(--neon-primary)]' : ''
                 }`}
               >
                 {/* Indicateur de joueur actif */}
                 {index === activePlayerIndex && (
-                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-2 h-8 bg-[var(--neon-primary)] rounded-full animate-pulse" />
+                  <div className="absolute -left-1 sm:-left-4 top-1/2 -translate-y-1/2 w-1 sm:w-2 h-4 sm:h-8 bg-[var(--neon-primary)] rounded-full animate-pulse" />
                 )}
                 
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${
+                <div className="flex justify-between items-center mb-1 sm:mb-2">
+                  <div className="flex items-center gap-1.5 sm:gap-3">
+                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-sm sm:text-base ${
                       index === activePlayerIndex ? 'bg-[var(--neon-primary)]' : 'bg-[var(--glass-bg-hover)]'
                     }`}>
                       {playerGame.player.username?.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-lg font-medium text-[var(--text-primary)]">
+                    <span className="text-sm sm:text-lg font-medium text-[var(--text-primary)]">
                       {playerGame.player.username}
                       {index === activePlayerIndex && (
-                        <span className="ml-2 text-[var(--neon-primary)]">• Au tour de jouer</span>
+                        <span className="ml-1 sm:ml-2 text-[var(--neon-primary)] text-xs sm:text-base">• Au tour de jouer</span>
                       )}
                     </span>
                   </div>
                   {session.game.variant !== DartVariant.CRICKET && (
-                    <span className="text-2xl font-bold text-[var(--neon-primary)]">
+                    <span className="text-lg sm:text-2xl font-bold text-[var(--neon-primary)]">
                       {playerGame.currentScore}
                     </span>
                   )}
                 </div>
 
                 {/* Statistiques du joueur */}
-                <div className="grid grid-cols-3 gap-4 mt-2">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mt-1 sm:mt-2">
                   {session.game.variant === DartVariant.CRICKET ? (
                     <>
                       <div className="text-center">
-                        <div className="text-sm text-[var(--text-secondary)]">Zones fermées</div>
-                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Zones fermées</div>
+                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
                           {Object.values(playerGame.cricketScores?.scores || {})
                             .filter(score => score.hits >= 3)
                             .length}
@@ -680,15 +680,15 @@ const GameSession: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-sm text-[var(--text-secondary)]">Points</div>
-                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Points</div>
+                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
                           {Object.values(playerGame.cricketScores?.scores || {})
                             .reduce((sum, score) => sum + (score.points || 0), 0)}
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-sm text-[var(--text-secondary)]">Touches</div>
-                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Touches</div>
+                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
                           {Object.values(playerGame.cricketScores?.scores || {})
                             .reduce((sum, score) => sum + (score.hits || 0), 0)}
                         </div>
@@ -697,14 +697,14 @@ const GameSession: React.FC = () => {
                   ) : (
                     <>
                       <div className="text-center">
-                        <div className="text-sm text-[var(--text-secondary)]">Fléchettes</div>
-                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Fléchettes</div>
+                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
                           {(playerGame.scores?.length || 0) * 3}
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-sm text-[var(--text-secondary)]">Précision</div>
-                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Précision</div>
+                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
                           {Math.round(
                             ((playerGame.scores?.filter((s: Score) => s.points > 40).length || 0) /
                             (playerGame.scores?.length || 1)) * 100
@@ -712,8 +712,8 @@ const GameSession: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-sm text-[var(--text-secondary)]">Dernier score</div>
-                        <div className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Dernier score</div>
+                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
                           {playerGame.scores?.[playerGame.scores.length - 1]?.points || 0}
                         </div>
                       </div>
@@ -725,7 +725,7 @@ const GameSession: React.FC = () => {
           </div>
 
           {/* Zone de jeu */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center order-1 lg:order-2">
             {/* Cible de fléchettes */}
             {session.game.gameType === GameType.DARTS && session.game.variant === DartVariant.CRICKET ? (
               <CricketDartBoard
@@ -735,7 +735,7 @@ const GameSession: React.FC = () => {
                 onTurnComplete={handleTurnComplete}
               />
             ) : (
-              <div className="flex items-center justify-center">
+              <div className="w-full max-w-md mx-auto">
                 <DartBoard 
                   onScoreSelect={handleScoreSelect}
                 />

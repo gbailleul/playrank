@@ -4,6 +4,7 @@ import { leaderboardService } from '../api/services/leaderboardService';
 import type { LeaderboardResponse, LeaderboardEntry } from '../types/index';
 import { DartVariant } from '../types/index';
 import GamingAvatar from '../components/atoms/GamingAvatar';
+import ResponsiveTable from '../components/atoms/ResponsiveTable';
 
 const Leaderboard: React.FC = () => {
   const { user } = useAuth();
@@ -81,17 +82,17 @@ const Leaderboard: React.FC = () => {
 
         {/* Leaderboard Table */}
         {leaderboardData && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <ResponsiveTable>
+            <table className="table">
               <thead>
                 <tr className="text-[var(--text-secondary)] text-left">
-                  <th className="px-6 py-3">Rang</th>
-                  <th className="px-6 py-3">Joueur</th>
-                  <th className="px-6 py-3">Parties jouées</th>
-                  <th className="px-6 py-3">Parties gagnées</th>
-                  <th className="px-6 py-3">Taux de victoire</th>
-                  <th className="px-6 py-3">Précision</th>
-                  <th className="px-6 py-3">Points/Fléchette</th>
+                  <th>Rang</th>
+                  <th>Joueur</th>
+                  <th>Parties jouées</th>
+                  <th>Parties gagnées</th>
+                  <th>Taux de victoire</th>
+                  <th>Précision</th>
+                  <th>Points/Fléchette</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,35 +123,37 @@ const Leaderboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
         )}
 
         {/* User's Rank (if not in top 100) */}
         {leaderboardData?.userRank && (
           <div className="mt-8 p-4 border-t border-[var(--border-subtle)]">
             <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Votre position</h2>
-            <table className="w-full">
-              <tbody>
-                <tr className="bg-[var(--accent-primary)]/10">
-                  <td className="px-6 py-4">{leaderboardData.userRank.rank}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <GamingAvatar
-                        name={leaderboardData.userRank.username}
-                        imageUrl={leaderboardData.userRank.avatarUrl}
-                        size="sm"
-                      />
-                      <span className="font-medium">{leaderboardData.userRank.username}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">{leaderboardData.userRank.gamesPlayed}</td>
-                  <td className="px-6 py-4">{leaderboardData.userRank.gamesWon}</td>
-                  <td className="px-6 py-4">{leaderboardData.userRank.winRate.toFixed(1)}%</td>
-                  <td className="px-6 py-4">{leaderboardData.userRank.accuracy.toFixed(1)}%</td>
-                  <td className="px-6 py-4">{leaderboardData.userRank.averagePointsPerDart.toFixed(1)}</td>
-                </tr>
-              </tbody>
-            </table>
+            <ResponsiveTable>
+              <table className="table">
+                <tbody>
+                  <tr className="bg-[var(--accent-primary)]/10">
+                    <td className="px-6 py-4">{leaderboardData.userRank.rank}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <GamingAvatar
+                          name={leaderboardData.userRank.username}
+                          imageUrl={leaderboardData.userRank.avatarUrl}
+                          size="sm"
+                        />
+                        <span className="font-medium">{leaderboardData.userRank.username}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{leaderboardData.userRank.gamesPlayed}</td>
+                    <td className="px-6 py-4">{leaderboardData.userRank.gamesWon}</td>
+                    <td className="px-6 py-4">{leaderboardData.userRank.winRate.toFixed(1)}%</td>
+                    <td className="px-6 py-4">{leaderboardData.userRank.accuracy.toFixed(1)}%</td>
+                    <td className="px-6 py-4">{leaderboardData.userRank.averagePointsPerDart.toFixed(1)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </ResponsiveTable>
           </div>
         )}
       </div>

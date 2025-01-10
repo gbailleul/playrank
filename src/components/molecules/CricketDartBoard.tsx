@@ -54,7 +54,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
   const sections = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
   
   // Dimensions du SVG et de la cible
-  const size = 400;
+  const size = window.innerWidth < 640 ? Math.min(window.innerWidth - 32, 300) : 400;
   const center = size / 2;
   const radius = size * 0.50;
 
@@ -200,7 +200,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
           textAnchor="middle"
           dominantBaseline="middle"
           fill={isCricketTarget ? (status?.closed ? "#22c55a" : "white") : "gray"}
-          className="font-bold text-lg"
+          className="font-bold text-sm sm:text-lg"
         >
           {score}
         </text>
@@ -211,7 +211,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
             textAnchor="middle"
             dominantBaseline="middle"
             fill={status.closed ? "#22c55a" : "white"}
-            className="font-bold text-lg"
+            className="font-bold text-sm sm:text-lg"
           >
             {getHitSymbol(status.hits)}
           </text>
@@ -331,8 +331,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
           x={center}
           y={center}
           fill="var(--text-primary)"
-          fontSize="24"
-          fontWeight="bold"
+          className="text-lg sm:text-2xl font-bold"
           textAnchor="middle"
           dominantBaseline="middle"
         >
@@ -359,7 +358,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
       </svg>
 
       {/* Indicateur de fléchettes avec scores */}
-      <div className="mt-4 flex justify-center items-center gap-4">
+      <div className="mt-2 sm:mt-4 flex justify-center items-center gap-2 sm:gap-4">
         {[0, 1, 2].map((index) => {
           const hit = index < dartHits.length ? dartHits[index] : null;
           
@@ -384,10 +383,10 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
               </svg>
               {/* Score de la fléchette */}
               {hit && (
-                <div className="text-[var(--text-primary)] font-bold text-2xl mt-2 flex flex-col items-center">
+                <div className="text-[var(--text-primary)] font-bold text-lg sm:text-2xl mt-1 sm:mt-2 flex flex-col items-center">
                   <span>{hit.target}</span>
                   {hit.multiplier > 1 && (
-                    <span className="text-sm">x{hit.multiplier}</span>
+                    <span className="text-xs sm:text-sm">x{hit.multiplier}</span>
                   )}
                 </div>
               )}

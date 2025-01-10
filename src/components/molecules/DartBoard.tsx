@@ -67,9 +67,9 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   const sections = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
   
   // Dimensions du SVG et de la cible
-  const size = 400; // Taille totale du SVG en pixels
-  const center = size / 2; // Point central de la cible
-  const radius = size * 0.50; // Rayon total de la cible (50% de la taille du SVG)
+  const size = window.innerWidth < 640 ? Math.min(window.innerWidth - 32, 300) : 400; // Taille adaptative pour mobile
+  const center = size / 2;
+  const radius = size * 0.50;
 
   // Rayons des différentes zones (en pourcentage du rayon total)
   const doubleRing = radius * 0.88;  // Anneau extérieur (double)
@@ -212,10 +212,10 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   };
 
   return (
-    <div className={`relative inline-block `}>
+    <div className={`relative inline-block w-full max-w-md mx-auto`}>
       {/* Zone de Miss */}
       <div 
-        className={`absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
+        className={`absolute sm:-right-32 -right-16 top-0 w-16 sm:w-24 h-16 sm:h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -238,7 +238,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
           />
         ))}
       </div>
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <svg
           width={size}
           height={size}
@@ -287,7 +287,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         </svg>
 
         {/* Indicateur de fléchettes avec scores */}
-        <div className="mt-4 flex justify-center items-center gap-4">
+        <div className="mt-2 sm:mt-4 flex justify-center items-center gap-2 sm:gap-4">
           {[0, 1, 2].map((index) => {
             const score = index < dartHits.length ? dartHits[index].score * dartHits[index].multiplier : 0;
             const getScoreClass = (score: number) => {
@@ -317,7 +317,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
                 </svg>
                 {/* Score de la fléchette */}
                 {index < dartHits.length && (
-                  <span className="text-[var(--text-primary)] font-bold text-2xl mt-2">
+                  <span className="text-[var(--text-primary)] font-bold text-lg sm:text-2xl mt-1 sm:mt-2">
                     {score}
                   </span>
                 )}
@@ -328,7 +328,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
 
         {/* Bouton de validation */}
         {dartHits.length === 3 && (
-          <div className="mt-4 text-center">
+          <div className="mt-2 sm:mt-4 text-center">
             <button
               onClick={handleValidate}
               className="game-button"

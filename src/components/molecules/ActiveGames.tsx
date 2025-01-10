@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { GameStatus } from '../../types/index';
 import type { Player as BasePlayer } from '../../types/index';
+import ResponsiveTable from '../atoms/ResponsiveTable';
 
 interface Player extends BasePlayer {
   currentScore?: number;
@@ -100,86 +101,88 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
         </div>
       ) : (
         <div className="dashboard-tile overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Partie</th>
-                <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Status</th>
-                <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Joueurs</th>
-                <th className="text-right p-4 text-[var(--text-secondary)] font-medium">Heure</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {games.map((game) => (
-                <tr 
-                  key={game.id}
-                  className={`hover:bg-white/5 transition-colors ${
-                    canJoinGame(game) ? 'cursor-pointer' : ''
-                  }`}
-                  onClick={() => handleGameClick(game)}
-                >
-                  <td className="p-4">
-                    {canJoinGame(game) ? (
-                      <span className="text-[var(--text-primary)] hover:text-[var(--accent-blue)] transition-colors">
-                        {game.name}
-                      </span>
-                    ) : (
-                      <span className="text-[var(--text-primary)]">
-                        {game.name}
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <span className={`font-medium ${getStatusStyle(game.status, !!game.winner)}`}>
-                      {getStatusText(game.status)}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="space-y-1">
-                      {game.players.map((player, index) => (
-                        <div key={player.id} className="flex items-center space-x-2">
-                          <span className="text-[var(--text-secondary)] text-sm">
-                            {index === 0 ? 'L' : 'C'}
-                          </span>
-                          <span className={`text-sm ${player.id === game.winner?.id ? 'text-[var(--status-completed)] font-medium' : 'text-[var(--text-primary)]'}`}>
-                            {player.username}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-4 text-right text-[var(--text-secondary)]">
-                    {formatTime(game.startedAt)}
-                  </td>
+          <ResponsiveTable>
+            <table className="table">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Partie</th>
+                  <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Status</th>
+                  <th className="text-left p-4 text-[var(--text-secondary)] font-medium">Joueurs</th>
+                  <th className="text-right p-4 text-[var(--text-secondary)] font-medium">Heure</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {games.map((game) => (
+                  <tr 
+                    key={game.id}
+                    className={`hover:bg-white/5 transition-colors ${
+                      canJoinGame(game) ? 'cursor-pointer' : ''
+                    }`}
+                    onClick={() => handleGameClick(game)}
+                  >
+                    <td className="p-4">
+                      {canJoinGame(game) ? (
+                        <span className="text-[var(--text-primary)] hover:text-[var(--accent-blue)] transition-colors">
+                          {game.name}
+                        </span>
+                      ) : (
+                        <span className="text-[var(--text-primary)]">
+                          {game.name}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span className={`font-medium ${getStatusStyle(game.status, !!game.winner)}`}>
+                        {getStatusText(game.status)}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="space-y-1">
+                        {game.players.map((player, index) => (
+                          <div key={player.id} className="flex items-center space-x-2">
+                            <span className="text-[var(--text-secondary)] text-sm">
+                              {index === 0 ? 'L' : 'C'}
+                            </span>
+                            <span className={`text-sm ${player.id === game.winner?.id ? 'text-[var(--status-completed)] font-medium' : 'text-[var(--text-primary)]'}`}>
+                              {player.username}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="p-4 text-right text-[var(--text-secondary)]">
+                      {formatTime(game.startedAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onPageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                  className="px-3 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-50 hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  Précédent
-                </button>
-                <span className="text-[var(--text-secondary)]">
-                  Page {pagination.currentPage} sur {pagination.totalPages}
-                </span>
-                <button
-                  onClick={() => onPageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  className="px-3 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-50 hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  Suivant
-                </button>
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onPageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                    className="px-3 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-50 hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    Précédent
+                  </button>
+                  <span className="text-[var(--text-secondary)]">
+                    Page {pagination.currentPage} sur {pagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() => onPageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                    className="px-3 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-50 hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    Suivant
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </ResponsiveTable>
         </div>
       )}
     </div>
