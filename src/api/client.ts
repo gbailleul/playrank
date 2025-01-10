@@ -27,6 +27,9 @@ client.interceptors.request.use((config: RetryConfig) => {
   config.retries = 3;
   config.retryDelay = 1000;
   return config;
+}, (error) => {
+  console.error('Request interceptor error:', error);
+  return Promise.reject(error);
 });
 
 // Add response interceptor for error handling and retries
@@ -45,19 +48,26 @@ client.interceptors.response.use(
       }
 
       const { status, data } = response;
+      
+      // Gérer les erreurs d'authentification
+      if (status === 401) {
+        console.log('Authentication error:', data);
+        // Supprimer le token
+        localStorage.removeItem('token');
+        
+        // Si ce n'est pas déjà la page de login
+        if (!window.location.pathname.includes('/login')) {
+          // Sauvegarder la page actuelle
+          const returnPath = window.location.pathname + window.location.search;
+          // Rediriger vers la page de login
+          window.location.href = `/login?returnTo=${encodeURIComponent(returnPath)}`;
+        }
+        
+        return Promise.reject(error);
+      }
+      
+      // Autres erreurs HTTP
       switch (status) {
-        case 401:
-          // Si le token est expiré ou invalide
-          if (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_TOKEN' || data.code === 'INVALID_CREDENTIALS') {
-            console.log('Token invalid or expired, redirecting to login');
-            // Supprimer le token
-            localStorage.removeItem('token');
-            // Rediriger vers la page de login avec le chemin de retour
-            const returnPath = window.location.pathname;
-            window.location.href = `/login?returnTo=${encodeURIComponent(returnPath)}`;
-            return Promise.reject(error);
-          }
-          break;
         case 403:
           console.error('Forbidden access:', data);
           break;

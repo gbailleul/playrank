@@ -27,10 +27,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isTokenValid = (token: string) => {
+    try {
+      const [, payload] = token.split('.');
+      if (!payload) return false;
+      
+      const decodedPayload = JSON.parse(atob(payload));
+      const expirationTime = decodedPayload.exp * 1000;
+      
+      return Date.now() < expirationTime;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
-      if (!token) {
+      if (!token || !isTokenValid(token)) {
+        localStorage.removeItem('token');
         setUser(null);
         setLoading(false);
         return;
@@ -40,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data } = await auth.getProfile();
         setUser(data);
       } catch (err) {
+        console.error('Error initializing auth:', err);
         localStorage.removeItem('token');
         setUser(null);
       } finally {
@@ -53,11 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       const { data } = await auth.login(email, password);
+      if (!data.token) {
+        throw new Error('No token received from server');
+      }
       localStorage.setItem('token', data.token);
       setUser(data.user);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login');
+      console.error('Login error:', err);
+      localStorage.removeItem('token');
+      setUser(null);
       throw err;
     }
   };
@@ -65,11 +86,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (username: string, firstName: string, lastName: string, email: string, password: string) => {
     try {
       const { data } = await auth.register(username, firstName, lastName, email, password);
+      if (!data.token) {
+        throw new Error('No token received from server');
+      }
       localStorage.setItem('token', data.token);
       setUser(data.user);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to register');
+      console.error('Registration error:', err);
+      localStorage.removeItem('token');
+      setUser(null);
       throw err;
     }
   };
@@ -77,12 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await auth.logout();
+    } catch (err: any) {
+      console.error('Logout error:', err);
+    } finally {
       localStorage.removeItem('token');
       setUser(null);
       setError(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to logout');
-      throw err;
     }
   };
 

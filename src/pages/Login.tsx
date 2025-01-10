@@ -19,13 +19,17 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate(returnTo);
+      navigate(returnTo, { replace: true });
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.response?.data?.message) {
+      if (err.response?.status === 401) {
+        setError('Email ou mot de passe incorrect');
+      } else if (err.response?.data?.message) {
         setError(err.response.data.message);
+      } else if (err.message === 'Network Error') {
+        setError('Impossible de se connecter au serveur. Veuillez vérifier votre connexion.');
       } else {
-        setError('Échec de la connexion. Veuillez vérifier vos identifiants.');
+        setError('Une erreur est survenue lors de la connexion. Veuillez réessayer.');
       }
     } finally {
       setIsLoading(false);
