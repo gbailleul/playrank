@@ -33,22 +33,26 @@ client.interceptors.request.use((config: RetryConfig) => {
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const { config } = error;
+    const { config, response } = error;
     
     // Si pas de config ou plus de retries disponibles, rejeter l'erreur
     if (!config || !config.retries) {
       console.error('API Error:', error);
       
-      if (!error.response) {
+      if (!response) {
         console.error('Network error:', error.message);
         return Promise.reject(error);
       }
 
-      const { status, data } = error.response;
+      const { status, data } = response;
       switch (status) {
         case 401:
-          localStorage.removeItem('token');
-          window.location.href = '/login';
+          // Si le token est expiré ou invalide, supprimer le token et rediriger
+          if (data.code === 'TOKEN_EXPIRED' || data.code === 'INVALID_TOKEN') {
+            console.log('Token invalid or expired, redirecting to login');
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+          }
           break;
         case 403:
           console.error('Forbidden access:', data);
