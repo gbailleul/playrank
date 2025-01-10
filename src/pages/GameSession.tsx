@@ -17,6 +17,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { io, Socket } from "socket.io-client";
 import type { GameSession, PlayerGame, Score, AddScoreData, User } from "../types/index";
 import { GameType, DartVariant } from "../types/index";
 import DartBoard from "../components/molecules/DartBoard";
@@ -43,6 +44,15 @@ interface ExtendedGameSession extends Omit<GameSession, 'players'> {
   players: ExtendedPlayerGame[];
 }
 
+interface GameUpdateEvent {
+  type: 'score_update' | 'game_status_update';
+  gameId: string;
+  sessionId: string;
+  playerId: string;
+  score?: Score;
+  cricketScore?: any;
+  status?: string;
+}
 
 const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,11 +64,8 @@ const GameSession: React.FC = () => {
   const [infoMessage, setInfoMessage] = useState<string>('');
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [winner, setWinner] = useState<{ username: string; id: string } | null>(null);
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [activePlayerIndex, setActivePlayerIndex] = useState<number>(() => {
-    const saved = localStorage.getItem(`activePlayer_${id}`);
-    return saved ? parseInt(saved, 10) : 0;
-  });
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [activePlayerIndex, setActivePlayerIndex] = useState<number>(0);
   const [gameState, setGameState] = useState<CricketGameState>({
     players: [],
     currentPlayerIndex: 0,
@@ -66,23 +73,29 @@ const GameSession: React.FC = () => {
   });
   const [showRules, setShowRules] = useState(false);
 
-  // Sauvegarder l'index du joueur actif dans le localStorage
-  useEffect(() => {
-    if (id) {
-      localStorage.setItem(`activePlayer_${id}`, activePlayerIndex.toString());
-    }
-  }, [activePlayerIndex, id]);
+  // Fonction utilitaire pour passer au joueur suivant
+  const moveToNextPlayer = useCallback(() => {
+    if (!session) return;
+    
+    const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+    console.log('Passage au joueur suivant:', {
+      currentIndex: activePlayerIndex,
+      nextIndex: nextPlayerIndex,
+      totalPlayers: session.players.length
+    });
+    
+    setActivePlayerIndex(nextPlayerIndex);
+  }, [activePlayerIndex, session]);
 
   /**
    * Récupère les données de la session depuis le backend
-   * Met à jour le gameState pour le Cricket avec les zones fermées
    */
   const fetchSession = useCallback(async () => {
     if (!id) return;
     
     try {
       const { data } = await gameService.getSession(id);
-      console.log('Game data:', data); // Debug log
+      console.log('Game data:', data);
       const gameSession = data.sessions?.[data.sessions.length - 1];
       if (gameSession) {
         // Transform the session data to include player and currentScore
@@ -148,93 +161,54 @@ const GameSession: React.FC = () => {
     }
   }, [id, activePlayerIndex]);
 
-  // Initialize WebSocket connection
+  // Initialize Socket.IO connection
   useEffect(() => {
     if (!session?.gameId) return;
 
-    let wsUrl: string;
+    let socketUrl: string;
     
     // En production
     if (import.meta.env.PROD) {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const prodWsUrl = import.meta.env.VITE_API_URL?.replace(/^https?:\/\//, '');
-      if (!prodWsUrl) {
-        console.error('VITE_API_URL is not defined in production');
-        return;
-      }
-      wsUrl = `${wsProtocol}//${prodWsUrl}/games`;
+      socketUrl = import.meta.env.VITE_API_URL || '';
     } else {
       // En développement
-      wsUrl = 'ws://localhost:8000/games';
+      socketUrl = 'http://localhost:8000';
     }
       
-    console.log('Tentative de connexion WebSocket à:', wsUrl);
+    console.log('Tentative de connexion Socket.IO à:', socketUrl);
     
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 3;
+    const newSocket = io(socketUrl, {
+      withCredentials: true,
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 3000
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Socket.IO connecté avec succès');
+      
+      // Envoyer les informations de connexion
+      newSocket.emit('join_game', {
+        gameId: session.game.id,
+        playerId: user?.id
+      });
+    });
     
-    const connectWebSocket = () => {
-      console.log('Création d\'une nouvelle connexion WebSocket...');
-      const websocket = new WebSocket(wsUrl);
-      
-      websocket.onopen = () => {
-        console.log('WebSocket connecté avec succès');
-        reconnectAttempts = 0; // Réinitialiser le compteur après une connexion réussie
-        
-        // Envoyer les informations de connexion
-        const joinData = {
-          type: 'join_game',
-          gameId: session.game.id,
-          playerId: user?.id
-        };
-        console.log('Envoi des données de connexion:', joinData);
-        websocket.send(JSON.stringify(joinData));
-      };
-      
-      websocket.onerror = (error) => {
-        console.error('Erreur WebSocket:', error);
-      };
+    newSocket.on('game_update', (data: GameUpdateEvent) => {
+      console.log('Mise à jour du jeu reçue:', data);
+      fetchSession();
+    });
 
-      websocket.onclose = (event) => {
-        console.log('WebSocket fermé:', event.code, event.reason);
-        
-        // Tentative de reconnexion si ce n'est pas une fermeture normale
-        if (event.code !== 1000 && event.code !== 1001) {
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            console.log(`Tentative de reconnexion ${reconnectAttempts}/${maxReconnectAttempts}...`);
-            setTimeout(connectWebSocket, 3000); // Attendre 3 secondes avant de réessayer
-          } else {
-            console.error('Nombre maximum de tentatives de reconnexion atteint');
-          }
-        }
-      };
+    newSocket.on('disconnect', () => {
+      console.log('Socket.IO déconnecté');
+    });
 
-      websocket.onmessage = (event) => {
-        try {
-          console.log('Message WebSocket reçu:', event.data);
-          const data = JSON.parse(event.data);
-          if (data.type === 'score_update' || data.type === 'game_status_update') {
-            console.log('Mise à jour du score reçue, actualisation de la session...');
-            fetchSession();
-          }
-        } catch (error) {
-          console.error('Erreur lors du traitement du message WebSocket:', error);
-        }
-      };
-
-      setWs(websocket);
-      
-      return websocket;
-    };
-
-    const websocket = connectWebSocket();
-
+    setSocket(newSocket);
+    
     return () => {
-      console.log('Nettoyage de la connexion WebSocket');
-      if (websocket.readyState === WebSocket.OPEN) {
-        websocket.close(1000, 'Fermeture normale');
-      }
+      console.log('Nettoyage de la connexion Socket.IO');
+      newSocket.disconnect();
     };
   }, [session?.gameId, user?.id, fetchSession]);
 
@@ -278,9 +252,7 @@ const GameSession: React.FC = () => {
             };
           });
 
-          // Passer au joueur suivant
-          const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
-          setActivePlayerIndex(nextPlayerIndex);
+          moveToNextPlayer();
         }
       } catch (error) {
         console.error("Error adding score:", error);
@@ -323,18 +295,14 @@ const GameSession: React.FC = () => {
           return;
         }
 
-        // Passer au joueur suivant
-        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
-        setActivePlayerIndex(nextPlayerIndex);
+        moveToNextPlayer();
       }
     } catch (error: any) {
       console.error("Error adding score:", error);
       if (error.response?.data?.message === 'Le dernier lancer doit être un double pour finir la partie') {
         setInfoMessage('💡 Règle du jeu : Pour gagner, vous devez finir sur un double ! Par exemple : double 8 pour 16 points.');
         setTimeout(() => setInfoMessage(''), 5000);
-        // On passe au joueur suivant car le joueur n'a pas réussi à finir sur un double
-        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
-        setActivePlayerIndex(nextPlayerIndex);
+        moveToNextPlayer();
       }
     }
   };
@@ -382,11 +350,11 @@ const GameSession: React.FC = () => {
         setShowVictoryModal(true);
       }
       
-      ws?.send(JSON.stringify({
+      socket?.emit('game_update', {
         type: 'game_status_update',
         gameId: session.game.id,
         status: 'COMPLETED'
-      }));
+      });
     } catch (err) {
       console.error("Error ending game:", err);
       setError('Failed to end game');
@@ -524,9 +492,7 @@ const GameSession: React.FC = () => {
         }
 
         // Passage au joueur suivant
-        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
-        console.log('Passage au joueur suivant:', nextPlayerIndex);
-        setActivePlayerIndex(nextPlayerIndex);
+        moveToNextPlayer();
       }
     } catch (error) {
       console.error("Error adding cricket score:", error);
@@ -670,17 +636,27 @@ const GameSession: React.FC = () => {
             {session.players.map((playerGame: ExtendedPlayerGame, index: number) => (
               <div 
                 key={playerGame.id}
-                className={`p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
+                className={`relative p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
                   index === activePlayerIndex ? 'ring-2 ring-[var(--neon-primary)]' : ''
                 }`}
               >
+                {/* Indicateur de joueur actif */}
+                {index === activePlayerIndex && (
+                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-2 h-8 bg-[var(--neon-primary)] rounded-full animate-pulse" />
+                )}
+                
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[var(--neon-primary)] flex items-center justify-center text-white">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${
+                      index === activePlayerIndex ? 'bg-[var(--neon-primary)]' : 'bg-[var(--glass-bg-hover)]'
+                    }`}>
                       {playerGame.player.username?.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-lg font-medium text-[var(--text-primary)]">
                       {playerGame.player.username}
+                      {index === activePlayerIndex && (
+                        <span className="ml-2 text-[var(--neon-primary)]">• Au tour de jouer</span>
+                      )}
                     </span>
                   </div>
                   {session.game.variant !== DartVariant.CRICKET && (
