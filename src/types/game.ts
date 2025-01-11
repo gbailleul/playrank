@@ -1,6 +1,7 @@
 export enum GameType {
   DARTS = 'DARTS',
-  BILLIARDS = 'BILLIARDS'
+  BILLIARDS = 'BILLIARDS',
+  FOOSBALL = 'FOOSBALL'
 }
 
 export enum GameStatus {
@@ -15,6 +16,69 @@ export enum DartVariant {
   THREE_HUNDRED_ONE = 'THREE_HUNDRED_ONE',
   CRICKET = 'CRICKET',
   AROUND_THE_CLOCK = 'AROUND_THE_CLOCK'
+}
+
+export interface Game {
+  id: string;
+  name: string;
+  description: string;
+  gameType: GameType;
+  maxScore: number;
+  minPlayers: number;
+  maxPlayers: number;
+  creatorId: string;
+  variant: DartVariant;
+  createdAt: Date;
+  updatedAt: Date;
+  sessions?: GameSession[];
+}
+
+export interface CreateGameDto {
+  name: string;
+  description: string;
+  gameType: GameType;
+  maxScore: number;
+  minPlayers: number;
+  maxPlayers: number;
+  variant: DartVariant;
+}
+
+export interface GameSession {
+  id: string;
+  gameId: string;
+  game: Game;
+  players: PlayerGame[];
+  status: GameStatus;
+  winnerId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PlayerGame {
+  id: string;
+  playerId: string;
+  gameSessionId: string;
+  gameSession: GameSession;
+  player: Player;
+  scores: Score[];
+  currentScore: number;
+  joinedAt: Date;
+}
+
+export interface Player {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+}
+
+export interface Score {
+  id: string;
+  points: number;
+  turnNumber: number;
+  isDouble: boolean;
+  createdAt: Date;
 }
 
 export interface DashboardGame {
@@ -36,18 +100,6 @@ export interface DashboardGame {
     id: string;
     username: string;
     avatarUrl?: string;
-  };
-}
-
-export interface DashboardResponse {
-  games: DashboardGame[];
-  globalStats: {
-    averageAccuracy: number;
-    averagePointsPerDart: number;
-    averageGamesPerPlayer: number;
-    totalDartsThrown: number;
-    totalDoubles: number;
-    totalTriples: number;
   };
 }
 

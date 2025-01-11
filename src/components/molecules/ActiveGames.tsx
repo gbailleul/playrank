@@ -1,22 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { GameStatus } from '../../types/index';
-import type { Player as BasePlayer } from '../../types/index';
+import type { GameStatus, DashboardGame } from '../../types/game';
 import ResponsiveTable from '../atoms/ResponsiveTable';
-
-interface Player extends BasePlayer {
-  currentScore?: number;
-}
-
-interface DashboardGame {
-  id: string;
-  name: string;
-  status: GameStatus;
-  winner?: Player;
-  players: Player[];
-  startedAt?: Date;
-}
 
 interface ActiveGamesProps {
   games: DashboardGame[];
@@ -40,11 +26,11 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
 
   const getStatusStyle = (status: GameStatus, hasWinner: boolean) => {
     switch (status) {
-      case GameStatus.IN_PROGRESS:
+      case 'IN_PROGRESS':
         return 'text-[var(--status-in-progress)]';
-      case GameStatus.COMPLETED:
+      case 'COMPLETED':
         return hasWinner ? 'text-[var(--status-completed)]' : 'text-[var(--text-secondary)]';
-      case GameStatus.CANCELLED:
+      case 'CANCELLED':
         return 'text-[var(--status-cancelled)]';
       default:
         return 'text-[var(--text-secondary)]';
@@ -53,13 +39,13 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
 
   const getStatusText = (status: GameStatus) => {
     switch (status) {
-      case GameStatus.IN_PROGRESS:
+      case 'IN_PROGRESS':
         return 'En cours';
-      case GameStatus.COMPLETED:
+      case 'COMPLETED':
         return 'Terminée';
-      case GameStatus.CANCELLED:
+      case 'CANCELLED':
         return 'Annulée';
-      case GameStatus.PENDING:
+      case 'PENDING':
         return 'En attente';
       default:
         return status;
@@ -72,7 +58,7 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
     const isPlayerInGame = game.players.some(player => player.id === user.id);
     const isAdmin = user.role === 'ADMIN';
     
-    if (game.status === GameStatus.IN_PROGRESS && !game.winner && (isPlayerInGame || isAdmin)) {
+    if (game.status === 'IN_PROGRESS' && !game.winner && (isPlayerInGame || isAdmin)) {
       navigate(`/games/${game.id}`);
     }
   };
@@ -81,7 +67,7 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
     if (!user) return false;
     const isPlayerInGame = game.players.some(player => player.id === user.id);
     const isAdmin = user.role === 'ADMIN';
-    return game.status === GameStatus.IN_PROGRESS && !game.winner && (isPlayerInGame || isAdmin);
+    return game.status === 'IN_PROGRESS' && !game.winner && (isPlayerInGame || isAdmin);
   };
 
   return (
@@ -139,7 +125,7 @@ const ActiveGames: React.FC<ActiveGamesProps> = ({ games, pagination, onPageChan
                     <td className="p-4">
                       <div className="space-y-1">
                         {game.players.map((player, index) => (
-                          <div key={player.id} className="flex items-center space-x-2">
+                          <div key={`${game.id}-${player.id}-${index}`} className="flex items-center space-x-2">
                             <span className="text-[var(--text-secondary)] text-sm">
                               {index === 0 ? 'L' : 'C'}
                             </span>
