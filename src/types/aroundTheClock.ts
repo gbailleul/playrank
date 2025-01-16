@@ -23,12 +23,8 @@ export interface AroundTheClockGameState {
 }
 
 export interface AroundTheClockScore {
-  id: string;
-  playerGameId: string;
   currentNumber: number;
   throwHistory: AroundTheClockThrow[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface AddAroundTheClockScoreData {

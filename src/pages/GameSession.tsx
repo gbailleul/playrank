@@ -571,54 +571,59 @@ const GameSession: React.FC = () => {
     const currentPlayer = session.players[activePlayerIndex];
     
     try {
-      const response = await gameService.addAroundTheClockScore(
-        session.game.id,
-        session.id,
-        {
-          playerId: currentPlayer.player.id,
-          ...throws[throws.length - 1]
-        }
-      );
+      // Envoyer chaque lancer au backend dans l'ordre
+      for (const throwData of throws) {
+        const response = await gameService.addAroundTheClockScore(
+          session.game.id,
+          session.id,
+          {
+            playerId: currentPlayer.player.id,
+            ...throwData
+          }
+        );
 
-      if (response.data.aroundTheClockScore) {
-        setSession(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            players: prev.players.map(p => {
-              if (p.player.id === currentPlayer.player.id) {
+        const aroundTheClockScore = (response.data as { aroundTheClockScore: AroundTheClockScore }).aroundTheClockScore;
+        if (aroundTheClockScore) {
+          setSession(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              players: prev.players.map(p => {
+                if (p.player.id === currentPlayer.player.id) {
+                  return {
+                    ...p,
+                    aroundTheClockScore
+                  };
+                }
+                return p;
+              })
+            };
+          });
+
+          // Mettre à jour l'état du jeu
+          setAroundTheClockState(prev => {
+            const updatedPlayers = prev.players.map(p => {
+              if (p.id === currentPlayer.player.id) {
                 return {
                   ...p,
-                  aroundTheClockScore: response.data.aroundTheClockScore
+                  currentNumber: aroundTheClockScore.currentNumber,
+                  throwHistory: aroundTheClockScore.throwHistory,
+                  totalThrows: aroundTheClockScore.throwHistory.length
                 };
               }
               return p;
-            })
-          };
-        });
+            });
 
-        // Mettre à jour l'état du jeu
-        setAroundTheClockState(prev => {
-          const updatedPlayers = prev.players.map(p => {
-            if (p.id === currentPlayer.player.id) {
-              return {
-                ...p,
-                currentNumber: response.data.aroundTheClockScore.currentNumber,
-                throwHistory: response.data.aroundTheClockScore.throwHistory,
-                totalThrows: response.data.aroundTheClockScore.throwHistory.length
-              };
-            }
-            return p;
+            return {
+              ...prev,
+              players: updatedPlayers
+            };
           });
-
-          return {
-            ...prev,
-            players: updatedPlayers
-          };
-        });
-
-        moveToNextPlayer();
+        }
       }
+
+      // Passer au joueur suivant seulement après avoir envoyé tous les lancers
+      moveToNextPlayer();
     } catch (error) {
       console.error("Error adding around the clock score:", error);
       setError('Failed to add score');

@@ -3,8 +3,15 @@ import type { AroundTheClockThrow } from '../../types/aroundTheClock';
 
 interface Props {
   currentNumber: number;
-  onScoreClick: (throws: AroundTheClockThrow[]) => void;
+  onScoreClick: (throws: AroundTheClockThrow[]) => Promise<void>;
   onTurnComplete?: () => void;
+}
+
+interface DartHit {
+  x: number;
+  y: number;
+  isHit: boolean;
+  number: number;
 }
 
 const AroundTheClockDartBoard: React.FC<Props> = ({
@@ -13,6 +20,14 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   onTurnComplete
 }) => {
   const [throwsInTurn, setThrowsInTurn] = useState<AroundTheClockThrow[]>([]);
+  const [dartHits, setDartHits] = useState<DartHit[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Calculer le prochain numéro à partir des lancers actuels
+  const getNextNumber = useCallback(() => {
+    const hasHitCurrentNumber = throwsInTurn.some(t => t.number === currentNumber && t.isHit);
+    return hasHitCurrentNumber ? currentNumber + 1 : currentNumber;
+  }, [throwsInTurn, currentNumber]);
 
   // Configuration de la cible
   const boardRadius = 200;
@@ -20,18 +35,20 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   const centerY = boardRadius;
   const numberRadius = boardRadius * 0.85; // Position des numéros
 
-  // Calculer la position des fléchettes dans une section
-  const getDartPosition = (number: number, throwIndex: number) => {
-    const angle = ((number - 20) * 18) * (Math.PI / 180); // Commencer à 20 en haut
-    const radius = boardRadius * (0.3 + throwIndex * 0.2); // Espacer les fléchettes radialement
-    return {
-      x: centerX + radius * Math.sin(angle),
-      y: centerY - radius * Math.cos(angle)
-    };
-  };
+  // Ordre des numéros sur une cible standard
+  const dartboardNumbers = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
 
-  const handleNumberClick = useCallback((number: number, clickX: number, clickY: number) => {
-    if (throwsInTurn.length >= 3) return;
+  const handleNumberClick = useCallback((number: number, event: React.MouseEvent<SVGElement>) => {
+    if (throwsInTurn.length >= 3 || isSubmitting) return;
+
+    const svg = event.currentTarget.closest('svg');
+    if (!svg) return;
+
+    const svgRect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+    
+    const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
+    const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
 
     const newThrow: AroundTheClockThrow = {
       number,
@@ -39,27 +56,37 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
       timestamp: Date.now()
     };
 
-    const updatedThrows = [...throwsInTurn, newThrow];
-    setThrowsInTurn(updatedThrows);
+    const newHit: DartHit = {
+      x,
+      y,
+      isHit: number === currentNumber,
+      number
+    };
 
-    if (updatedThrows.length === 3) {
-      onScoreClick(updatedThrows);
-      setThrowsInTurn([]);
-      onTurnComplete?.();
-    }
-  }, [throwsInTurn, currentNumber, onScoreClick, onTurnComplete]);
+    setThrowsInTurn(prev => [...prev, newThrow]);
+    setDartHits(prev => [...prev, newHit]);
+  }, [throwsInTurn, currentNumber, isSubmitting]);
 
-  const handleEndTurn = useCallback(() => {
-    if (throwsInTurn.length > 0) {
-      onScoreClick(throwsInTurn);
+  const handleValidateScore = useCallback(async () => {
+    if (throwsInTurn.length === 0 || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      await onScoreClick(throwsInTurn);
       setThrowsInTurn([]);
+      setDartHits([]);
       onTurnComplete?.();
+    } catch (error) {
+      console.error('Error submitting throws:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [throwsInTurn, onScoreClick, onTurnComplete]);
+  }, [throwsInTurn, onScoreClick, onTurnComplete, isSubmitting]);
 
   // Calculer la position des numéros autour de la cible
   const getNumberPosition = (number: number) => {
-    const angle = ((number - 20) * 18) * (Math.PI / 180); // Commencer à 20 en haut
+    const index = dartboardNumbers.indexOf(number);
+    const angle = (index * 18) * (Math.PI / 180); // 360° / 20 = 18° par section
     return {
       x: centerX + numberRadius * Math.sin(angle),
       y: centerY - numberRadius * Math.cos(angle)
@@ -68,11 +95,15 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
 
   // Générer les sections de la cible
   const generateSections = () => {
+    const nextNumber = getNextNumber();
     const sections = [];
-    for (let i = 1; i <= 20; i++) {
-      const isTarget = i === currentNumber;
-      const isHit = throwsInTurn.some(t => t.number === i && t.isHit);
-      const angle = ((i - 20) * 18) * (Math.PI / 180);
+
+    dartboardNumbers.forEach((number, index) => {
+      const isTarget = number === currentNumber;
+      const isNext = number === nextNumber && number !== currentNumber;
+      const isValidated = number < currentNumber;
+      const isHit = throwsInTurn.some(t => t.number === number && t.isHit);
+      const angle = index * 18 * (Math.PI / 180);
       const startAngle = angle - (9 * Math.PI / 180);
       const endAngle = angle + (9 * Math.PI / 180);
 
@@ -89,59 +120,63 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
       ].join(' ');
 
       sections.push(
-        <g key={i}>
+        <g key={number}>
           <path
             d={path}
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = e.clientX - rect.left;
-              const y = e.clientY - rect.top;
-              handleNumberClick(i, x, y);
-            }}
+            onClick={(e) => handleNumberClick(number, e)}
             className={`
               cursor-pointer transition-all duration-200
-              ${isTarget ? 'fill-[var(--neon-primary)]' : 'fill-[var(--glass-bg-lighter)]'}
-              ${isHit ? 'stroke-green-500 stroke-2' : 'stroke-[var(--text-primary)] stroke-1'}
+              ${isValidated ? 'fill-green-500/30 stroke-green-500 stroke-2' : 
+                isTarget ? 'fill-[var(--neon-primary)] stroke-[var(--neon-primary)] stroke-2 animate-pulse' :
+                isNext ? 'fill-yellow-500/30 stroke-yellow-500 stroke-2' :
+                'fill-[var(--glass-bg-lighter)] stroke-[var(--text-primary)] stroke-1'}
+              ${isHit ? 'stroke-green-500 stroke-2' : ''}
               hover:brightness-110
+              ${isSubmitting || throwsInTurn.length >= 3 ? 'cursor-not-allowed opacity-50' : ''}
             `}
           />
           <text
-            x={getNumberPosition(i).x}
-            y={getNumberPosition(i).y}
+            x={getNumberPosition(number).x}
+            y={getNumberPosition(number).y}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="text-sm font-bold fill-current text-[var(--text-primary)]"
-            transform={`rotate(${(i - 20) * 18}, ${getNumberPosition(i).x}, ${getNumberPosition(i).y})`}
+            className={`text-sm font-bold fill-current ${
+              isValidated ? 'text-green-500' :
+              isTarget ? 'text-[var(--neon-primary)]' :
+              isNext ? 'text-yellow-500' :
+              'text-[var(--text-primary)]'
+            }`}
+            transform={`rotate(${index * 18}, ${getNumberPosition(number).x}, ${getNumberPosition(number).y})`}
           >
-            {i}
+            {number}
           </text>
-          {/* Afficher les fléchettes pour cette section */}
-          {throwsInTurn.map((t, index) => {
-            if (t.number === i) {
-              const pos = getDartPosition(i, index);
-              return (
-                <g key={`dart-${index}`} transform={`translate(${pos.x}, ${pos.y})`}>
-                  {/* Corps de la fléchette */}
-                  <path
-                    d="M-2,0 L2,0 M0,-8 L0,8 M-4,-6 L4,-6"
-                    className={`stroke-2 ${t.isHit ? 'stroke-green-500' : 'stroke-red-500'}`}
-                    strokeLinecap="round"
-                  />
-                  {/* Empennage */}
-                  <path
-                    d="M-3,-7 L0,-4 L3,-7"
-                    className={`fill-none stroke-2 ${t.isHit ? 'stroke-green-500' : 'stroke-red-500'}`}
-                    strokeLinecap="round"
-                  />
-                </g>
-              );
-            }
-            return null;
-          })}
         </g>
       );
-    }
+    });
+
     return sections;
+  };
+
+  // Affichage des impacts
+  const renderHits = () => {
+    return dartHits.map((hit, index) => (
+      <g key={index}>
+        {/* Impact central */}
+        <circle
+          cx={hit.x}
+          cy={hit.y}
+          r={4}
+          className={`${hit.isHit ? 'fill-green-500' : 'fill-red-500'} stroke-white stroke-1`}
+        />
+        {/* Halo extérieur */}
+        <circle
+          cx={hit.x}
+          cy={hit.y}
+          r={6}
+          className={`fill-none ${hit.isHit ? 'stroke-green-500' : 'stroke-red-500'} stroke-1 opacity-50`}
+        />
+      </g>
+    ));
   };
 
   return (
@@ -152,6 +187,7 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
           width={boardRadius * 2}
           height={boardRadius * 2}
           viewBox={`0 0 ${boardRadius * 2} ${boardRadius * 2}`}
+          className={isSubmitting || throwsInTurn.length >= 3 ? 'cursor-not-allowed' : ''}
         >
           {/* Cercle extérieur */}
           <circle
@@ -176,6 +212,8 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
             r={boardRadius * 0.04}
             className="fill-red-500"
           />
+          {/* Impacts de fléchettes */}
+          {renderHits()}
         </svg>
       </div>
 
@@ -191,15 +229,15 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
         </div>
 
         <button
-          onClick={handleEndTurn}
-          disabled={throwsInTurn.length === 0}
+          onClick={handleValidateScore}
+          disabled={throwsInTurn.length === 0 || isSubmitting}
           className="
             px-6 py-2 rounded-lg bg-[var(--neon-primary)] text-black font-bold
             hover:bg-[var(--neon-primary)]/90 focus:outline-none focus:ring-2 focus:ring-[var(--neon-primary)]
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          Terminer le tour
+          {isSubmitting ? 'Envoi en cours...' : 'Valider le score'}
         </button>
       </div>
     </div>
