@@ -334,16 +334,15 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         </div>
 
         {/* Bouton de validation */}
-        {dartHits.length === 3 && (
-          <div className="mt-2 sm:mt-4 text-center">
-            <button
-              onClick={handleValidate}
-              className="game-button"
-            >
-              Valider le score
-            </button>
-          </div>
-        )}
+        <div className="mt-2 sm:mt-4 text-center">
+          <button
+            onClick={handleValidate}
+            className={`game-button ${dartHits.length < 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={dartHits.length < 3}
+          >
+            Valider le score
+          </button>
+        </div>
       </div>
     </div>
   );
