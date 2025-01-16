@@ -215,7 +215,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
     <div className="relative w-full max-w-md mx-auto mt-8">
       {/* Zone de Miss - grande zone derrière la cible uniquement */}
       <div 
-        className={`absolute -top-16 -left-16 -right-16 bottom-[120px]
+        className={`absolute -top-16 -left-16 -right-16 bottom-[180px]
           bg-[#1a1a1a] border-2 border-[var(--neon-primary)] border-opacity-20
           backdrop-blur-sm bg-opacity-20 rounded-lg cursor-crosshair
           hover:bg-opacity-30 hover:border-opacity-30 transition-colors duration-200
