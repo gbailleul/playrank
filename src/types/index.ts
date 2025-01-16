@@ -107,7 +107,11 @@ export interface PlayerGame {
   playerId: string;
   gameSessionId: string;
   gameSession: GameSession;
-  user: User;
+  user?: User;
+  guestPlayer?: {
+    id: string;
+    name: string;
+  };
   scores: Score[];
   cricketScores?: {
     scores: PlayerCricketScores;

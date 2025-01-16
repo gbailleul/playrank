@@ -36,7 +36,7 @@ interface GameWithSessions extends Game {
 }
 
 interface ExtendedPlayerGame extends PlayerGame {
-  user: User;
+  user?: User;
   scores: Score[];
   cricketScores?: {
     scores: Record<string, CricketScoreTarget>;
@@ -46,7 +46,7 @@ interface ExtendedPlayerGame extends PlayerGame {
 interface ExtendedGameSession extends Omit<GameSession, 'players'> {
   game: Game;
   players: Array<PlayerGame & {
-    user: {
+    player: {
       id: string;
       username: string;
     };
@@ -70,6 +70,7 @@ interface GameUpdateEvent {
 
 interface ApiResponse<T> {
   data: T;
+  message?: string;
 }
 
 interface CricketScoreResponse {
@@ -77,6 +78,19 @@ interface CricketScoreResponse {
     scores: Record<string, CricketScoreTarget>;
   };
 }
+
+// Helper functions to get player info
+const getPlayerId = (player: PlayerGame) => {
+  if (player.user) return player.user.id;
+  if (player.guestPlayer) return player.guestPlayer.id;
+  return 'guest';
+};
+
+const getPlayerUsername = (player: PlayerGame) => {
+  if (player.user) return player.user.username;
+  if (player.guestPlayer) return player.guestPlayer.name;
+  return 'Invité';
+};
 
 const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -146,11 +160,11 @@ const GameSession: React.FC = () => {
             createdAt: data.createdAt,
             updatedAt: data.updatedAt
           },
-          players: gameSession.players.map((p: ExtendedPlayerGame) => ({
+          players: gameSession.players.map((p: PlayerGame) => ({
             ...p,
             player: {
-              id: p.user.id,
-              username: p.user.username
+              id: getPlayerId(p),
+              username: getPlayerUsername(p)
             },
             currentScore: data.maxScore - (p.scores?.reduce((sum: number, s: Score) => sum + s.points, 0) || 0)
           }))
@@ -171,36 +185,16 @@ const GameSession: React.FC = () => {
             '25': { hits: 0, points: 0 }
           };
 
-          const initializedPlayers = extendedSession.players.map(player => {
-            console.log('Initializing Cricket player:', {
-              userId: player.user.id,
-              scores: player.cricketScores
-            });
-
-            const scores = player.cricketScores?.scores
+          const initializedPlayers = extendedSession.players.map(player => ({
+            id: getPlayerId(player),
+            username: getPlayerUsername(player),
+            scores: player.cricketScores?.scores
               ? (typeof player.cricketScores.scores === 'string'
                   ? JSON.parse(player.cricketScores.scores)
                   : player.cricketScores.scores)
-              : defaultScores;
-
-            // Ensure all required targets exist
-            const validScores: PlayerCricketScores = {
-              ...defaultScores,
-              ...scores
-            };
-
-            const totalPoints = Object.values(validScores).reduce(
-              (sum, score) => sum + (score.points || 0),
-              0
-            );
-
-            return {
-              id: player.user.id,  // Utiliser l'ID de l'utilisateur
-              username: player.user.username,
-              scores: validScores,
-              totalPoints
-            };
-          });
+              : defaultScores,
+            totalPoints: 0
+          }));
 
           console.log('Setting initial Cricket game state:', {
             players: initializedPlayers,
@@ -252,11 +246,7 @@ const GameSession: React.FC = () => {
     newSocket.on('game_update', (data: GameUpdateEvent) => {
       console.log('Mise à jour du jeu reçue:', data);
       if (data.type === 'score_update' && session) {
-        // Mise à jour pour le Cricket
         if (data.cricketScore && session.game.variant === DartVariant.CRICKET) {
-          console.log('Mise à jour des scores Cricket reçue:', data.cricketScore);
-          
-          // Mise à jour du gameState
           setGameState(prev => {
             const updatedPlayers = prev.players.map(p => {
               if (p.id === data.playerId) {
@@ -265,38 +255,23 @@ const GameSession: React.FC = () => {
                   (sum, score) => sum + (score.points || 0),
                   0
                 );
-                console.log('Mise à jour du joueur:', {
-                  id: p.id,
-                  newScores: scores,
-                  totalPoints
-                });
-                return {
-                  ...p,
-                  scores,
-                  totalPoints
-                };
+                return { ...p, scores, totalPoints };
               }
               return p;
             });
-
-            console.log('Joueurs mis à jour:', updatedPlayers);
-            return {
-              ...prev,
-              players: updatedPlayers
-            };
+            return { ...prev, players: updatedPlayers };
           });
 
-          // Mise à jour de la session
           setSession(prev => {
             if (!prev) return prev;
             return {
               ...prev,
               players: prev.players.map(p => {
-                if (p.user.id === data.playerId) {
+                if (p.player.id === data.playerId) {
                   return {
                     ...p,
                     cricketScores: {
-                      scores: data.cricketScore.scores as Record<string, CricketScoreTarget>
+                      scores: data.cricketScore.scores
                     }
                   };
                 }
@@ -304,22 +279,12 @@ const GameSession: React.FC = () => {
               })
             };
           });
-
-          // Passage au joueur suivant
           moveToNextPlayer();
-        }
-        // Gestion des autres variantes (301/501)
-        else if (data.score) {
-          console.log('Mise à jour du score 501:', {
-            playerId: data.playerId,
-            score: data.score,
-            currentPlayerIndex: activePlayerIndex
-          });
-
+        } else if (data.score) {
           setSession(prev => {
             if (!prev) return prev;
             const updatedPlayers = prev.players.map(p => {
-              if (p.user.id === data.playerId && data.score) {
+              if (p.player.id === data.playerId && data.score) {
                 const newScore = p.currentScore - data.score.points;
                 return {
                   ...p,
@@ -330,26 +295,15 @@ const GameSession: React.FC = () => {
               return p;
             });
 
-            // Trouver le joueur qui vient de jouer
-            const playerIndex = updatedPlayers.findIndex(p => p.user.id === data.playerId);
+            const playerIndex = updatedPlayers.findIndex(p => p.player.id === data.playerId);
             const newScore = updatedPlayers[playerIndex].currentScore;
 
-            // Si ce n'est pas un score gagnant, passer au joueur suivant
             if (newScore !== 0) {
               const nextPlayerIndex = (playerIndex + 1) % updatedPlayers.length;
-              console.log('Passage au joueur suivant:', {
-                currentIndex: playerIndex,
-                nextIndex: nextPlayerIndex
-              });
               setActivePlayerIndex(nextPlayerIndex);
-            } else {
-              console.log('Score gagnant - pas de changement de joueur');
             }
 
-            return {
-              ...prev,
-              players: updatedPlayers
-            };
+            return { ...prev, players: updatedPlayers };
           });
         }
       }
@@ -374,14 +328,14 @@ const GameSession: React.FC = () => {
     const remainingScore = currentPlayer.currentScore - score;
 
     if (remainingScore < 0) {
-      setInfoMessage('💡 Score trop élevé ! Le score ne peut pas être négatif.');
+      setInfoMessage('Score trop élevé ! Le score ne peut pas être négatif.');
       setTimeout(() => setInfoMessage(''), 5000);
       return;
     }
 
     try {
       const scoreData: AddScoreData = {
-        playerId: currentPlayer.user.id,
+        playerId: currentPlayer.player.id,
         points: score,
         turnNumber: currentPlayer.scores?.length || 0,
         isDouble
@@ -389,9 +343,8 @@ const GameSession: React.FC = () => {
 
       await gameService.addScore(session.game.id, session.id, scoreData);
 
-      // Le changement de joueur est maintenant géré uniquement dans l'événement socket
       if (remainingScore === 0) {
-        handleEndGame(currentPlayer.user.id);
+        handleEndGame(currentPlayer.player.id);
       }
     } catch (error: any) {
       console.error("Error adding score:", error);
@@ -436,10 +389,10 @@ const GameSession: React.FC = () => {
       }
       
       // Trouver le joueur gagnant
-      const winningPlayer = session.players.find(p => p.user.id === winnerId);
+      const winningPlayer = session.players.find(p => p.player.id === winnerId);
       if (winningPlayer) {
         setWinner({
-          username: winningPlayer.user.username,
+          username: winningPlayer.player.username,
           id: winnerId
         });
         setShowVictoryModal(true);
@@ -467,79 +420,52 @@ const GameSession: React.FC = () => {
     
     try {
       const scoreData: CricketScoreData = {
-        playerId: currentPlayer.user.id,
+        playerId: currentPlayer.player.id,
         throws: throws,
         turnNumber: currentPlayer.scores?.length || 0
       };
 
-      console.log('=== GameSession - Envoi des scores au backend ===');
-      console.log('Données envoyées:', scoreData);
-      const { data } = await gameService.addCricketScore(session.game.id, session.id, scoreData) as ApiResponse<CricketScoreResponse>;
-      console.log('Réponse du backend:', data);
+      const response = await gameService.addCricketScore(session.game.id, session.id, scoreData) as ApiResponse<CricketScoreResponse>;
+      const cricketScore = response.data.cricketScore;
 
-      if (data.cricketScore) {
-        console.log('=== GameSession - Mise à jour du state ===');
-        console.log('État actuel:', gameState);
-        
-        // Mise à jour du gameState avec les scores complets
-        const scores = data.cricketScore.scores as PlayerCricketScores;
+      if (cricketScore) {
+        const scores = cricketScore.scores as PlayerCricketScores;
         const totalPoints = Object.values(scores).reduce(
           (sum, score) => sum + (score.points || 0),
           0
         );
 
-        console.log('Mise à jour des scores Cricket:', {
-          playerId: currentPlayer.user.id,
-          scores,
-          totalPoints
-        });
-
-        // Mise à jour immédiate du state
         setGameState(prev => {
           const updatedPlayers = prev.players.map(p => {
-            if (p.id === currentPlayer.user.id) {
-              return {
-                ...p,
-                scores,
-                totalPoints
-              };
+            if (p.id === currentPlayer.player.id) {
+              return { ...p, scores, totalPoints };
             }
             return p;
           });
-
-          console.log('Nouveau state des joueurs:', updatedPlayers);
-          return {
-            ...prev,
-            players: updatedPlayers
-          };
+          return { ...prev, players: updatedPlayers };
         });
 
-        // Mise à jour de la session
         setSession(prev => {
           if (!prev) return prev;
-          const updatedPlayers = prev.players.map(p => {
-            if (p.user.id === currentPlayer.user.id) {
-              return {
-                ...p,
-                cricketScores: {
-                  scores: data.cricketScore.scores as Record<string, CricketScoreTarget>
-                }
-              };
-            }
-            return p;
-          });
-
-          console.log('Session mise à jour avec les joueurs:', updatedPlayers);
           return {
             ...prev,
-            players: updatedPlayers
+            players: prev.players.map(p => {
+              if (p.player.id === currentPlayer.player.id) {
+                return {
+                  ...p,
+                  cricketScores: {
+                    scores: cricketScore.scores
+                  }
+                };
+              }
+              return p;
+            })
           };
         });
 
-        // Vérification des conditions de victoire
         const allTargetsClosed = Object.values(scores).every(score => score.hits >= 3);
         const otherPlayersTotalPoints = gameState.players
-          .filter(p => p.id !== currentPlayer.user.id)
+          .filter(p => p.id !== currentPlayer.player.id)
           .map(p => Object.values(p.scores)
             .reduce((sum, score) => sum + (score.points || 0), 0)
           );
@@ -547,25 +473,23 @@ const GameSession: React.FC = () => {
         const hasHighestScore = otherPlayersTotalPoints.every(points => points <= totalPoints);
 
         if (allTargetsClosed && hasHighestScore) {
-          console.log('=== Victoire détectée ===');
-          const winningPlayer = session.players.find(p => p.user.id === currentPlayer.user.id);
+          const winningPlayer = session.players.find(p => p.player.id === currentPlayer.player.id);
           if (winningPlayer) {
             setWinner({
-              username: winningPlayer.user.username,
-              id: currentPlayer.user.id
+              username: winningPlayer.player.username,
+              id: currentPlayer.player.id
             });
             setShowVictoryModal(true);
-            handleEndGame(currentPlayer.user.id);
+            handleEndGame(currentPlayer.player.id);
           }
 
           setGameState(prev => ({
             ...prev,
             gameStatus: GameStatus.COMPLETED,
-            winner: currentPlayer.user.id
+            winner: currentPlayer.player.id
           }));
         }
 
-        // Passage au joueur suivant
         moveToNextPlayer();
       }
     } catch (error) {
@@ -616,14 +540,14 @@ const GameSession: React.FC = () => {
         );
 
         console.log('Initializing player:', {
-          id: player.user.id,
+          id: player.player.id,
           scores: validScores,
           totalPoints
         });
 
         return {
-          id: player.user.id,
-          username: player.user.username,
+          id: player.player.id,
+          username: player.player.username,
           scores: validScores,
           totalPoints
         };
@@ -694,15 +618,13 @@ const GameSession: React.FC = () => {
                 {session.players.map((player, index) => {
                   const isCurrentPlayer = index === activePlayerIndex;
                   const isCricket = session.game.variant === DartVariant.CRICKET;
-                  
-                  // Pour le Cricket, on récupère les scores depuis le gameState
                   const cricketPlayer = isCricket 
-                    ? gameState.players.find(p => p.id === player.user.id)
+                    ? gameState.players.find(p => p.id === player.player.id)
                     : null;
 
                   return (
                     <div
-                      key={player.user.id}
+                      key={player.player.id}
                       className={`p-4 rounded-lg transition-all ${
                         isCurrentPlayer
                           ? 'bg-[var(--neon-primary)]/10 border border-[var(--neon-primary)] shadow-lg'
@@ -718,7 +640,7 @@ const GameSession: React.FC = () => {
                               </div>
                             )}
                             <span className="text-lg font-medium text-[var(--text-primary)]">
-                              {player.user.username}
+                              {player.player.username}
                             </span>
                           </div>
                         </div>
@@ -751,7 +673,7 @@ const GameSession: React.FC = () => {
               <CricketDartBoard
                 gameState={gameState}
                 onScoreClick={handleCricketScore}
-                currentPlayerId={session.players[activePlayerIndex].user.id}
+                currentPlayerId={session.players[activePlayerIndex].player.id}
                 onTurnComplete={handleTurnComplete}
               />
             ) : (
