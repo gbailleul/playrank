@@ -32,9 +32,12 @@ export const auth = {
     return client.post('/auth/reset-password', { token, password });
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    return client.post('/auth/logout');
+  logout: async () => {
+    try {
+      await client.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('token');
+    }
   },
 
   updateAvatar: (avatarData: string | File) => {

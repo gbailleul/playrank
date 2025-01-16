@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Game, GameSession, PlayerGame, Score } from '../types/index';
+import { gameService } from '../api/services';
 
 const GameBoard: React.FC = () => {
   const { id } = useParams();
@@ -9,6 +10,8 @@ const GameBoard: React.FC = () => {
   const [players, setPlayers] = useState<PlayerGame[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [currentScore, setCurrentScore] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGameData();
@@ -16,28 +19,32 @@ const GameBoard: React.FC = () => {
 
   const fetchGameData = async () => {
     try {
-      const response = await fetch(`/api/games/${id}`);
-      if (response.ok) {
-        const gameData = await response.json();
-        setGame(gameData);
-        if (gameData.sessions?.length > 0) {
-          const latestSession = gameData.sessions[gameData.sessions.length - 1];
-          setCurrentSession(latestSession);
-          setPlayers(latestSession.players);
-        }
+      if (!id) return;
+      const response = await gameService.getGame(id);
+      const gameData = response.data;
+      setGame(gameData);
+      if (gameData.sessions && gameData.sessions.length > 0) {
+        const latestSession = gameData.sessions[gameData.sessions.length - 1];
+        setCurrentSession(latestSession);
+        setPlayers(latestSession.players);
       }
     } catch (error) {
       console.error('Error fetching game:', error);
+      setError('Erreur lors du chargement de la partie');
     }
   };
 
   const calculateRemainingScore = (player: PlayerGame) => {
-    return player.scores.reduce((sum: number, score: Score) => sum + score.points, 0);
+    const totalScore = player.scores.reduce((sum: number, score: Score) => sum + score.points, 0);
+    return game?.maxScore ? game.maxScore - totalScore : 0;
   };
 
-  const isValidScore = (score: number) => {
+  const isValidScore = (score: number, remainingScore: number) => {
     // Vérifier si le score est valide pour le jeu de fléchettes
     if (score < 0 || score > 180) return false; // Score maximum possible en un tour (3 x Triple 20)
+    
+    // Vérifier si le score ne dépasse pas le score restant
+    if (score > remainingScore) return false;
     
     // Vérifier les combinaisons valides pour un tour
     const validScores = [
@@ -54,44 +61,53 @@ const GameBoard: React.FC = () => {
 
   const handleScoreSubmit = async () => {
     if (!game || !currentSession || !players.length) return;
-
-    if (!isValidScore(currentScore)) {
-      alert('Score invalide. Veuillez entrer un score valide pour le jeu de fléchettes.');
-      return;
-    }
-
-    const player = players[currentPlayer];
-    const remainingScore = calculateRemainingScore(player) - currentScore;
-
-    // Vérifier si le score final est exactement 0 et se termine par un double
-    if (remainingScore < 0 || (remainingScore === 0 && currentScore % 2 !== 0)) {
-      alert('Score invalide. Le jeu doit se terminer exactement à 0 avec un double.');
-      return;
-    }
+    setError(null);
+    setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/games/${game.id}/sessions/${currentSession.id}/scores`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          playerId: player.playerId,
-          points: currentScore,
-          turnNumber: player.scores.length + 1,
-        }),
+      const player = players[currentPlayer];
+      const remainingScore = calculateRemainingScore(player);
+
+      if (!isValidScore(currentScore, remainingScore)) {
+        setError('Score invalide. Veuillez entrer un score valide pour le jeu de fléchettes.');
+        return;
+      }
+
+      // Vérifier si le score final est exactement 0 et se termine par un double
+      const newRemainingScore = remainingScore - currentScore;
+      if (newRemainingScore < 0) {
+        setError('Score invalide. Le score ne peut pas être négatif.');
+        return;
+      }
+      
+      if (newRemainingScore === 0 && currentScore % 2 !== 0) {
+        setError('Score invalide. Le jeu doit se terminer exactement à 0 avec un double.');
+        return;
+      }
+
+      await gameService.addScore(game.id, currentSession.id, {
+        playerId: player.playerId,
+        points: currentScore,
+        turnNumber: player.scores.length + 1,
       });
 
-      if (response.ok) {
-        // Mettre à jour le joueur suivant
-        setCurrentPlayer((prev) => (prev + 1) % players.length);
-        setCurrentScore(0);
-        
-        // Recharger les données du jeu
-        await fetchGameData();
-      }
+      // Mettre à jour le joueur suivant
+      setCurrentPlayer((prev) => {
+        // Si le joueur actuel a gagné (score à 0), on ne change pas de joueur
+        if (newRemainingScore === 0) {
+          return prev;
+        }
+        // Sinon, on passe au joueur suivant
+        return (prev + 1) % players.length;
+      });
+      
+      setCurrentScore(0);
+      await fetchGameData();
     } catch (error) {
       console.error('Error submitting score:', error);
+      setError('Erreur lors de l\'envoi du score');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -105,13 +121,19 @@ const GameBoard: React.FC = () => {
         <div className="p-6">
           <h1 className="text-2xl font-bold mb-6">{game.name}</h1>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {players.map((player, index) => (
                 <div
                   key={player.playerId}
                   className={`text-center p-4 rounded-lg ${
-                    index === currentPlayer ? 'bg-blue-50' : 'bg-gray-50'
+                    index === currentPlayer ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-gray-50'
                   }`}
                 >
                   <h3 className="font-semibold">
@@ -141,13 +163,15 @@ const GameBoard: React.FC = () => {
                   onChange={(e) => setCurrentScore(parseInt(e.target.value) || 0)}
                   placeholder="Entrez le score"
                   className="game-input w-full"
+                  disabled={isLoading}
                 />
               </div>
               <button
                 onClick={handleScoreSubmit}
                 className="game-button"
+                disabled={isLoading}
               >
-                Valider le score
+                {isLoading ? 'Validation...' : 'Valider le score'}
               </button>
             </div>
 

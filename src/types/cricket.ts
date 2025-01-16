@@ -1,3 +1,5 @@
+import { GameStatus } from './game';
+
 export type CricketTarget = 15 | 16 | 17 | 18 | 19 | 20 | 25;
 
 export interface CricketScore {
@@ -28,7 +30,7 @@ export interface CricketGameState {
     totalPoints: number;
   }>;
   currentPlayerIndex: number;
-  gameStatus: 'IN_PROGRESS' | 'COMPLETED';
+  gameStatus: GameStatus;
   winner?: string;
 }
 

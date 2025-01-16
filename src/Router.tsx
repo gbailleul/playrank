@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
@@ -87,25 +87,21 @@ const Router = () => {
         }
       />
 
-      {/* Public Dashboard */}
-      <Route path="/" element={<MainLayout />}>
+      {/* Main Layout Routes (mix of public and protected) */}
+      <Route element={<MainLayout />}>
+        {/* Public routes within MainLayout */}
         <Route index element={<Dashboard />} />
         <Route path="leaderboard" element={<Leaderboard />} />
-      </Route>
 
-      {/* Protected routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="profile" element={<Profile />} />
-        <Route path="test-connection" element={<TestConnection />} />
-        <Route path="games/new" element={<CreateGame />} />
-        <Route path="games/:id" element={<GameSession />} />
+        {/* Protected routes within MainLayout */}
+        <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+          <Route path="profile" element={<Profile />} />
+          <Route path="test-connection" element={<TestConnection />} />
+          <Route path="games">
+            <Route path="new" element={<CreateGame />} />
+            <Route path=":id" element={<GameSession />} />
+          </Route>
+        </Route>
       </Route>
 
       {/* Catch all route */}

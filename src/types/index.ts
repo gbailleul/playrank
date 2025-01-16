@@ -1,5 +1,6 @@
-import { GameType, DartVariant, GameStatus, DashboardGame } from './game';
-import { PlayerCricketScores } from './cricket';
+import { GameType, DartVariant, GameStatus } from './game';
+import type { DashboardGame } from './game';
+import type { PlayerCricketScores } from './cricket';
 
 export interface UserStatistics {
   id: string;
@@ -70,6 +71,7 @@ export interface AddScoreData {
   points: number;
   turnNumber: number;
   isDouble?: boolean;
+  isTriple?: boolean;
 }
 
 export interface CricketScoreData {
@@ -105,7 +107,7 @@ export interface PlayerGame {
   playerId: string;
   gameSessionId: string;
   gameSession: GameSession;
-  player: User;
+  user: User;
   scores: Score[];
   cricketScores?: {
     scores: PlayerCricketScores;
@@ -119,7 +121,7 @@ export interface GameSession {
   gameId: string;
   game: Game;
   players: PlayerGame[];
-  status: 'IN_PROGRESS' | 'COMPLETED';
+  status: GameStatus;
   winnerId?: string;
   createdAt: Date;
   updatedAt: Date;

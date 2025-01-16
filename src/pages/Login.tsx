@@ -22,10 +22,10 @@ const Login: React.FC = () => {
       navigate(returnTo, { replace: true });
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.response?.status === 401) {
-        setError('Email ou mot de passe incorrect');
-      } else if (err.response?.data?.message) {
+      if (err.response?.data?.message) {
         setError(err.response.data.message);
+      } else if (err.response?.status === 401) {
+        setError('Email ou mot de passe incorrect');
       } else if (err.message === 'Network Error') {
         setError('Impossible de se connecter au serveur. Veuillez vérifier votre connexion.');
       } else {
