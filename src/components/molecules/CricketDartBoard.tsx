@@ -94,6 +94,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
    * @returns Objet contenant le statut de fermeture et le nombre de hits
    */
   const getTargetStatus = (target: CricketTarget) => {
+    const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
     if (!currentPlayer?.scores) {
       return { closed: false, hits: 0 };
     }
@@ -232,7 +233,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
     // Send all throws at once
     onScoreClick(validThrows);
     
-    // Reset darts
+    // Reset darts and complete turn
     setDartHits([]);
     onTurnComplete();
   };
