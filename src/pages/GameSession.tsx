@@ -72,10 +72,6 @@ interface ApiResponse<T> {
   data: T;
 }
 
-interface ScoreResponse {
-  score: Score;
-}
-
 interface CricketScoreResponse {
   cricketScore: {
     scores: Record<string, CricketScoreTarget>;
@@ -99,7 +95,6 @@ const GameSession: React.FC = () => {
     currentPlayerIndex: 0,
     gameStatus: GameStatus.IN_PROGRESS
   });
-  const [showRules, setShowRules] = useState(false);
 
   // Fonction utilitaire pour passer au joueur suivant
   const moveToNextPlayer = useCallback(() => {
@@ -643,9 +638,6 @@ const GameSession: React.FC = () => {
     }
   }, [session, activePlayerIndex]);
 
-  const calculateTotalPoints = (scores: CricketScoreTarget[]): number => {
-    return scores.reduce((sum: number, score: CricketScoreTarget) => sum + score.points, 0);
-  };
 
   if (loading) {
     return (
@@ -667,8 +659,6 @@ const GameSession: React.FC = () => {
       </div>
     );
   }
-
-  const activePlayer = session?.players[activePlayerIndex]?.playerId;
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-7xl">
