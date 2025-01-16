@@ -212,11 +212,16 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   };
 
   return (
-    <div className={`relative inline-block w-full max-w-md mx-auto`}>
-      {/* Zone de Miss */}
+    <div className="relative w-full max-w-md mx-auto mt-8">
+      {/* Zone de Miss - grande zone derrière la cible uniquement */}
       <div 
-        className={`absolute sm:-right-32 -right-16 top-0 w-16 sm:w-24 h-16 sm:h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
+        className={`absolute -top-16 -left-16 -right-16 bottom-[120px]
+          bg-[#1a1a1a] border-2 border-[var(--neon-primary)] border-opacity-20
+          backdrop-blur-sm bg-opacity-20 rounded-lg cursor-crosshair
+          hover:bg-opacity-30 hover:border-opacity-30 transition-colors duration-200
+          ${dartHits.length >= 3 ? 'pointer-events-none !bg-opacity-10 !border-opacity-10' : ''}`}
         onClick={(e) => {
+          if (dartHits.length >= 3) return;
           const rect = e.currentTarget.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -224,7 +229,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
           setDartHits([...dartHits, newHit]);
         }}
       >
-        <span className="absolute inset-0 flex items-center justify-center text-[var(--text-primary)] pointer-events-none">
+        <span className="absolute top-2 left-2 text-[var(--text-primary)] text-sm sm:text-base font-medium pointer-events-none">
           Miss
         </span>
         {dartHits.filter(hit => hit.isMiss).map((hit, index) => (
@@ -238,10 +243,12 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
           />
         ))}
       </div>
-      <div className="p-2 sm:p-4">
+
+      {/* Container de la cible avec position relative */}
+      <div className="relative z-10 w-full aspect-square">
         <svg
-          width={size}
-          height={size}
+          width="100%"
+          height="100%"
           viewBox={`0 0 ${size} ${size}`}
           className="cursor-crosshair"
         >
@@ -287,7 +294,7 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
         </svg>
 
         {/* Indicateur de fléchettes avec scores */}
-        <div className="mt-2 sm:mt-4 flex justify-center items-center gap-2 sm:gap-4">
+        <div className="mt-16 flex justify-center items-center gap-2 sm:gap-4">
           {[0, 1, 2].map((index) => {
             const score = index < dartHits.length ? dartHits[index].score * dartHits[index].multiplier : 0;
             const getScoreClass = (score: number) => {

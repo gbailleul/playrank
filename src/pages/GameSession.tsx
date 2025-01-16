@@ -136,6 +136,11 @@ const GameSession: React.FC = () => {
       console.log('Game data:', data);
       const gameSession = data.sessions?.[data.sessions.length - 1];
       if (data && gameSession) {
+        // Trouver l'index du joueur actif en fonction du nombre de scores
+        const playerScoreCounts = gameSession.players.map(p => p.scores?.length || 0);
+        const minScores = Math.min(...playerScoreCounts);
+        const activePlayerIdx = playerScoreCounts.findIndex(count => count === minScores);
+        
         const extendedSession: ExtendedGameSession = {
           id: gameSession.id,
           gameId: data.id,
@@ -165,6 +170,7 @@ const GameSession: React.FC = () => {
           }))
         };
         setSession(extendedSession);
+        setActivePlayerIndex(activePlayerIdx);
 
         // Si c'est une partie de cricket, initialiser le gameState
         if (data.variant === DartVariant.CRICKET) {
@@ -198,13 +204,12 @@ const GameSession: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, activePlayerIndex]);
+  }, [id]);
 
   // Initialize Socket.IO connection
   useEffect(() => {
     if (!session?.gameId) return;
 
-    // Récupérer l'URL de base sans le /api
     const baseUrl = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace('/api', '') 
       : 'http://localhost:8000';
@@ -217,33 +222,48 @@ const GameSession: React.FC = () => {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      transports: ['websocket', 'polling']
+      transports: ['websocket']
     });
 
     newSocket.on('connect', () => {
       console.log('Socket.IO connecté avec succès');
-      
-      // Envoyer les informations de connexion
       newSocket.emit('join_game', {
         gameId: session.game.id,
         playerId: user?.id
       });
     });
 
-    newSocket.on('connect_error', (error) => {
-      console.error('Erreur de connexion Socket.IO:', error);
-    });
-    
     newSocket.on('game_update', (data: GameUpdateEvent) => {
       console.log('Mise à jour du jeu reçue:', data);
-      fetchSession();
-    });
+      if (data.type === 'score_update' && session) {
+        setSession(prev => {
+          if (!prev) return prev;
+          const updatedPlayers = prev.players.map(p => {
+            if (p.user.id === data.playerId && data.score) {
+              return {
+                ...p,
+                scores: [...p.scores, data.score],
+                currentScore: p.currentScore - data.score.points
+              };
+            }
+            return p;
+          });
+          return {
+            ...prev,
+            players: updatedPlayers
+          };
+        });
 
-    newSocket.on('disconnect', (reason) => {
-      console.log('Socket.IO déconnecté. Raison:', reason);
-      if (reason === 'io server disconnect') {
-        // Le serveur a forcé la déconnexion
-        newSocket.connect();
+        // Mettre à jour l'index du joueur actif en fonction des scores
+        setActivePlayerIndex(prevIndex => {
+          const nextIndex = (prevIndex + 1) % session.players.length;
+          console.log('Passage au joueur suivant (via socket):', {
+            prevIndex,
+            nextIndex,
+            totalPlayers: session.players.length
+          });
+          return nextIndex;
+        });
       }
     });
 
@@ -251,11 +271,9 @@ const GameSession: React.FC = () => {
     
     return () => {
       console.log('Nettoyage de la connexion Socket.IO');
-      if (newSocket.connected) {
-        newSocket.disconnect();
-      }
+      newSocket.disconnect();
     };
-  }, [session?.gameId, user?.id, fetchSession]);
+  }, [session?.gameId, user?.id]);
 
   useEffect(() => {
     fetchSession();
@@ -267,45 +285,12 @@ const GameSession: React.FC = () => {
     const currentPlayer = session.players[activePlayerIndex];
     const remainingScore = currentPlayer.currentScore - score;
 
-    // Si le score dépasse, on envoie un score de 0
     if (remainingScore < 0) {
-      try {
-        const scoreData: AddScoreData = {
-          playerId: currentPlayer.user.id,
-          points: 0,
-          turnNumber: currentPlayer.scores?.length || 0,
-          isDouble
-        };
-
-        const { data } = await gameService.addScore(session.game.id, session.id, scoreData) as ApiResponse<ScoreResponse>;
-
-        if (data.score) {
-          setSession(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              players: prev.players.map(p => {
-                if (p.user.id === currentPlayer.user.id) {
-                  return {
-                    ...p,
-                    scores: [...(p.scores || []), data.score],
-                    currentScore: p.currentScore
-                  };
-                }
-                return p;
-              }),
-            };
-          });
-
-          moveToNextPlayer();
-        }
-      } catch (error) {
-        console.error("Error adding score:", error);
-      }
+      setInfoMessage('💡 Score trop élevé ! Le score ne peut pas être négatif.');
+      setTimeout(() => setInfoMessage(''), 5000);
       return;
     }
 
-    // Score normal
     try {
       const scoreData: AddScoreData = {
         playerId: currentPlayer.user.id,
@@ -334,20 +319,17 @@ const GameSession: React.FC = () => {
           };
         });
 
-        // Si le joueur a gagné (score = 0)
         if (remainingScore === 0) {
           handleEndGame(currentPlayer.user.id);
           return;
         }
-
-        moveToNextPlayer();
+        // Suppression de moveToNextPlayer() ici car il sera géré par l'événement socket
       }
     } catch (error: any) {
       console.error("Error adding score:", error);
       if (error.response?.data?.message === 'Le dernier lancer doit être un double pour finir la partie') {
         setInfoMessage('💡 Règle du jeu : Pour gagner, vous devez finir sur un double ! Par exemple : double 8 pour 16 points.');
         setTimeout(() => setInfoMessage(''), 5000);
-        moveToNextPlayer();
       }
     }
   };
@@ -634,147 +616,62 @@ const GameSession: React.FC = () => {
         />
       )}
 
-      {/* Message informatif */}
-      {infoMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[90%] sm:w-auto">
-          <div className="bg-blue-900 text-[var(--text-primary)] px-3 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg border border-[var(--neon-primary)] relative text-sm sm:text-base">
-            {infoMessage}
-            <button
-              onClick={() => setInfoMessage('')}
-              className="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--glass-bg)] border border-[var(--neon-primary)] flex items-center justify-center hover:bg-[var(--glass-bg-hover)]"
-            >
-              <XCircleIcon className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--text-primary)]" />
-            </button>
+      <div className="bg-[var(--glass-bg)] rounded-lg shadow-xl p-4 sm:p-6 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-4 sm:mb-0">
+            {session.game.name}
+          </h1>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {infoMessage && (
+              <div className="text-sm text-[var(--text-primary)] bg-[var(--neon-primary)]/10 px-4 py-2 rounded-lg">
+                {infoMessage}
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Titre de la session */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-4 sm:mb-8">
-        <h1 className="text-xl sm:text-3xl font-bold text-[var(--text-primary)]">
-          {session.game.name}
-        </h1>
-        <div className="flex flex-wrap gap-2 sm:gap-4">
-          {session.game.variant === DartVariant.CRICKET && (
-            <button
-              onClick={() => setShowRules(true)}
-              className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)] text-sm sm:text-base"
-            >
-              Règles du jeu
-            </button>
-          )}
-          <Link
-            to="/games"
-            className="px-2 sm:px-4 py-1.5 sm:py-2 rounded bg-[var(--glass-bg)] text-[var(--text-primary)] hover:bg-[var(--glass-bg-hover)] text-sm sm:text-base"
-          >
-            Retour aux jeux
-          </Link>
-        </div>
-      </div>
-
-      {/* Modal des règles */}
-      {session.game.variant === DartVariant.CRICKET && (
-        <CricketRules isOpen={showRules} onClose={() => setShowRules(false)} />
-      )}
-
-      {/* Contenu principal */}
-      <div className="space-y-4 sm:space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Tableau des scores */}
-          <div className="space-y-2 sm:space-y-4 order-2 lg:order-1">
-            {session.players.map((playerGame: ExtendedPlayerGame, index: number) => (
-              <div 
-                key={playerGame.id}
-                className={`relative p-2 sm:p-4 bg-[var(--glass-bg)] rounded-lg transition-all ${
-                  index === activePlayerIndex ? 'ring-2 ring-[var(--neon-primary)]' : ''
-                }`}
-              >
-                {/* Indicateur de joueur actif */}
-                {index === activePlayerIndex && (
-                  <div className="absolute -left-1 sm:-left-4 top-1/2 -translate-y-1/2 w-1 sm:w-2 h-4 sm:h-8 bg-[var(--neon-primary)] rounded-full animate-pulse" />
-                )}
-                
-                <div className="flex justify-between items-center mb-1 sm:mb-2">
-                  <div className="flex items-center gap-1.5 sm:gap-3">
-                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-sm sm:text-base ${
-                      index === activePlayerIndex ? 'bg-[var(--neon-primary)]' : 'bg-[var(--glass-bg-hover)]'
-                    }`}>
-                      {playerGame.user.username?.charAt(0).toUpperCase()}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Scores</h2>
+            <div className="bg-[var(--glass-bg)] rounded-lg p-4">
+              <div className="space-y-4">
+                {session.players.map((player, index) => {
+                  const isCurrentPlayer = index === activePlayerIndex;
+                  return (
+                    <div
+                      key={player.user.id}
+                      className={`p-4 rounded-lg transition-all ${
+                        isCurrentPlayer
+                          ? 'bg-[var(--neon-primary)]/10 border border-[var(--neon-primary)] shadow-lg'
+                          : 'bg-[var(--glass-bg-lighter)]'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            {isCurrentPlayer && (
+                              <div className="absolute -left-2 -top-2">
+                                <span className="text-[var(--neon-primary)]">🎯</span>
+                              </div>
+                            )}
+                            <span className="text-lg font-medium text-[var(--text-primary)]">
+                              {player.user.username}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-bold text-[var(--text-primary)]">
+                          {player.currentScore}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-sm sm:text-lg font-medium text-[var(--text-primary)]">
-                      {playerGame.user.username}
-                      {index === activePlayerIndex && (
-                        <span className="ml-1 sm:ml-2 text-[var(--neon-primary)] text-xs sm:text-base">• Au tour de jouer</span>
-                      )}
-                    </span>
-                  </div>
-                  {session.game.variant !== DartVariant.CRICKET && (
-                    <span className="text-lg sm:text-2xl font-bold text-[var(--neon-primary)]">
-                      {playerGame.currentScore}
-                    </span>
-                  )}
-                </div>
-
-                {/* Statistiques du joueur */}
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mt-1 sm:mt-2">
-                  {session.game.variant === DartVariant.CRICKET ? (
-                    <>
-                      <div className="text-center">
-                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Zones fermées</div>
-                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
-                          {Object.values(playerGame.cricketScores?.scores || {})
-                            .filter(score => score.hits >= 3)
-                            .length}
-                          /7
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Points</div>
-                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
-                          {Object.values(playerGame.cricketScores?.scores || {})
-                            .reduce((sum, score) => sum + (score.points || 0), 0)}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Touches</div>
-                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
-                          {Object.values(playerGame.cricketScores?.scores || {})
-                            .reduce((sum, score) => sum + (score.hits || 0), 0)}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-center">
-                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Fléchettes</div>
-                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
-                          {(playerGame.scores?.length || 0) * 3}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Précision</div>
-                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
-                          {Math.round(
-                            ((playerGame.scores?.filter((s: Score) => s.points > 40).length || 0) /
-                            (playerGame.scores?.length || 1)) * 100
-                          )}%
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs sm:text-sm text-[var(--text-secondary)]">Dernier score</div>
-                        <div className="text-xs sm:text-lg font-medium text-[var(--text-primary)]">
-                          {playerGame.scores?.[playerGame.scores.length - 1]?.points || 0}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            ))}
+            </div>
           </div>
 
           {/* Zone de jeu */}
-          <div className="flex flex-col items-center order-1 lg:order-2">
+          <div className="flex flex-col items-center">
             {/* Cible de fléchettes */}
             {session.game.gameType === GameType.DARTS && session.game.variant === DartVariant.CRICKET ? (
               <CricketDartBoard
