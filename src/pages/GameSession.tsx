@@ -35,14 +35,6 @@ interface GameWithSessions extends Game {
   sessions: GameSession[];
 }
 
-interface ExtendedPlayerGame extends PlayerGame {
-  user?: User;
-  scores: Score[];
-  cricketScores?: {
-    scores: Record<string, CricketScoreTarget>;
-  };
-}
-
 interface ExtendedGameSession extends Omit<GameSession, 'players'> {
   game: Game;
   players: Array<PlayerGame & {
