@@ -238,22 +238,24 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
   };
 
   return (
-    <div className="relative inline-block">
-      {/* Zone de Miss */}
+    <div className="relative w-full max-w-md mx-auto mt-8">
+      {/* Zone de Miss - grande zone derrière la cible uniquement */}
       <div 
-        data-testid="miss-zone"
-        className={`absolute -right-32 top-0 w-24 h-24 bg-[var(--glass-bg)] rounded-lg cursor-crosshair ${dartHits.length >= 3 ? 'pointer-events-none opacity-50' : ''}`}
+        className={`absolute -top-12 -left-12 -right-12 h-[480px]
+          bg-[#1a1a1a] border-2 border-[var(--neon-primary)] border-opacity-20
+          backdrop-blur-sm bg-opacity-20 rounded-lg cursor-crosshair
+          hover:bg-opacity-30 hover:border-opacity-30 transition-colors duration-200
+          ${dartHits.length >= 3 ? 'pointer-events-none !bg-opacity-10 !border-opacity-10' : ''}`}
         onClick={(e) => {
           if (dartHits.length >= 3) return;
           const rect = e.currentTarget.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
           const newHit = { target: 0, multiplier: 0, x, y, isMiss: true };
-          const newHits = [...dartHits, newHit];
-          setDartHits(newHits);
+          setDartHits([...dartHits, newHit]);
         }}
       >
-        <span className="absolute inset-0 flex items-center justify-center text-[var(--text-primary)] pointer-events-none">
+        <span className="absolute top-2 left-2 text-[var(--text-primary)] text-sm sm:text-base font-medium pointer-events-none">
           Miss
         </span>
         {dartHits.filter(hit => hit.isMiss).map((hit, index) => (
@@ -268,157 +270,163 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         ))}
       </div>
 
-
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform rotate-9">
-        {/* Fond de la cible */}
-        <circle cx={center} cy={center} r={radius} className="fill-[#1a1a2e] stroke-[var(--neon-primary)]" strokeWidth="2" />
-        
-        {/* Lignes de séparation */}
-        {sections.map((_, index) => {
-          const angle = index * 18 - 99;
-          const rad = (angle * Math.PI) / 180;
-          return (
-            <line
-              key={`line-${index}`}
-              x1={center}
-              y1={center}
-              x2={center + radius * Math.cos(rad)}
-              y2={center + radius * Math.sin(rad)}
-              className="stroke-[var(--neon-primary)] stroke-[0.5]"
-            />
-          );
-        })}
-
-        {/* Cercles concentriques */}
-        <circle cx={center} cy={center} r={doubleRing} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
-        <circle cx={center} cy={center} r={outerSingle} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
-        <circle cx={center} cy={center} r={tripleRing} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
-        <circle cx={center} cy={center} r={innerSingle} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
-        <circle cx={center} cy={center} r={bullOuter} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
-        
-        {/* Sections */}
-        {sections.map((score, index) => {
-          const section = createSection(index, score);
-          return (
-            <g key={score} data-testid={`target-${score}`}>
-              {section}
-            </g>
-          );
-        })}
-
-        {/* Bull's eye */}
-        <circle 
-          data-testid="bull-outer"
-          cx={center} 
-          cy={center} 
-          r={bullOuter}
-          className={`cursor-pointer stroke-[var(--neon-primary)] stroke-2 transition-colors hover:brightness-150 hover:opacity-80
-            ${getTargetStatus(25).closed ? 'fill-[#22c55a]/50' : 'fill-[#dc2626]/50'}`}
-          onClick={(e) => handleHit(25, 1, e)}
-        />
-        <circle 
-          data-testid="bull-inner"
-          cx={center} 
-          cy={center} 
-          r={bullInner}
-          className={`cursor-pointer stroke-[var(--neon-primary)] stroke-2 transition-colors hover:brightness-150 hover:opacity-80
-            ${getTargetStatus(25).closed ? 'fill-[#22c55a]/50' : 'fill-[#dc2626]/50'}`}
-          onClick={(e) => handleHit(25, 2, e)}
-        />
-
-        {/* Score total */}
-        <text
-          x={center}
-          y={center}
-          fill="var(--text-primary)"
-          className="text-lg sm:text-2xl font-bold"
-          textAnchor="middle"
-          dominantBaseline="middle"
+      {/* Container de la cible avec position relative */}
+      <div className="relative z-10 w-full aspect-square">
+        <svg 
+          width={size} 
+          height={size} 
+          viewBox={`0 0 ${size} ${size}`} 
+          className="transform rotate-9"
         >
-          {currentPlayer?.totalPoints || 0}
-        </text>
-
-        {/* Impacts sur la cible */}
-        {dartHits.filter(hit => !hit.isMiss).map((hit, index) => (
-          <g key={index}>
-            <circle
-              cx={hit.x}
-              cy={hit.y}
-              r={4}
-              className="fill-white stroke-black stroke-1"
-            />
-            <circle
-              cx={hit.x}
-              cy={hit.y}
-              r={6}
-              className="fill-none stroke-white stroke-1 opacity-50"
-            />
-          </g>
-        ))}
-      </svg>
-
-      {/* Indicateur de fléchettes avec scores */}
-      <div className="mt-2 sm:mt-4 flex justify-center items-center gap-2 sm:gap-4">
-        {[0, 1, 2].map((index) => {
-          const hit = index < dartHits.length ? dartHits[index] : null;
+          {/* Fond de la cible */}
+          <circle cx={center} cy={center} r={radius} className="fill-[#1a1a2e] stroke-[var(--neon-primary)]" strokeWidth="2" />
           
-          return (
-            <div 
-              key={index}
-              data-testid={`dart-indicator-${index + 1}`}
-              className={`flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-gray-700 transition-all duration-300 ${
-                index < dartHits.length ? 'bg-[var(--glass-bg)]' : 'bg-gray-800 opacity-40'
-              }`}
-            >
-              <svg
-                width="20"
-                height="40"
-                viewBox="0 0 512 512"
-                className="transition-all duration-200 w-8 h-8 text-[var(--text-primary)]"
+          {/* Lignes de séparation */}
+          {sections.map((_, index) => {
+            const angle = index * 18 - 99;
+            const rad = (angle * Math.PI) / 180;
+            return (
+              <line
+                key={`line-${index}`}
+                x1={center}
+                y1={center}
+                x2={center + radius * Math.cos(rad)}
+                y2={center + radius * Math.sin(rad)}
+                className="stroke-[var(--neon-primary)] stroke-[0.5]"
+              />
+            );
+          })}
+
+          {/* Cercles concentriques */}
+          <circle cx={center} cy={center} r={doubleRing} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
+          <circle cx={center} cy={center} r={outerSingle} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
+          <circle cx={center} cy={center} r={tripleRing} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
+          <circle cx={center} cy={center} r={innerSingle} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
+          <circle cx={center} cy={center} r={bullOuter} className="fill-none stroke-[var(--neon-primary)] stroke-[0.5]" />
+          
+          {/* Sections */}
+          {sections.map((score, index) => {
+            const section = createSection(index, score);
+            return (
+              <g key={score} data-testid={`target-${score}`}>
+                {section}
+              </g>
+            );
+          })}
+
+          {/* Bull's eye */}
+          <circle 
+            data-testid="bull-outer"
+            cx={center} 
+            cy={center} 
+            r={bullOuter}
+            className={`cursor-pointer stroke-[var(--neon-primary)] stroke-2 transition-colors hover:brightness-150 hover:opacity-80
+              ${getTargetStatus(25).closed ? 'fill-[#22c55a]/50' : 'fill-[#dc2626]/50'}`}
+            onClick={(e) => handleHit(25, 1, e)}
+          />
+          <circle 
+            data-testid="bull-inner"
+            cx={center} 
+            cy={center} 
+            r={bullInner}
+            className={`cursor-pointer stroke-[var(--neon-primary)] stroke-2 transition-colors hover:brightness-150 hover:opacity-80
+              ${getTargetStatus(25).closed ? 'fill-[#22c55a]/50' : 'fill-[#dc2626]/50'}`}
+            onClick={(e) => handleHit(25, 2, e)}
+          />
+
+          {/* Score total */}
+          <text
+            x={center}
+            y={center}
+            fill="var(--text-primary)"
+            className="text-lg sm:text-2xl font-bold"
+            textAnchor="middle"
+            dominantBaseline="middle"
+          >
+            {currentPlayer?.totalPoints || 0}
+          </text>
+
+          {/* Impacts sur la cible */}
+          {dartHits.filter(hit => !hit.isMiss).map((hit, index) => (
+            <g key={index}>
+              <circle
+                cx={hit.x}
+                cy={hit.y}
+                r={4}
+                className="fill-white stroke-black stroke-1"
+              />
+              <circle
+                cx={hit.x}
+                cy={hit.y}
+                r={6}
+                className="fill-none stroke-white stroke-1 opacity-50"
+              />
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {/* Indicateur de fléchettes avec scores et légende */}
+      <div className="mt-2 sm:mt-4 flex justify-center items-start gap-8">
+        {/* Fléchettes */}
+        <div className="flex gap-2 sm:gap-4">
+          {[0, 1, 2].map((index) => {
+            const hit = index < dartHits.length ? dartHits[index] : null;
+            return (
+              <div 
+                key={index}
+                data-testid={`dart-indicator-${index + 1}`}
+                className={`flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-gray-700 transition-all duration-300 ${
+                  index < dartHits.length ? 'bg-[var(--glass-bg)]' : 'bg-gray-800 opacity-40'
+                }`}
               >
-                <path
-                  fill="currentColor"
-                  d="M134.745 22.098c-4.538-.146-9.08 1.43-14.893 7.243-5.586 5.586-11.841 21.725-15.248 35.992-.234.979-.444 1.907-.654 2.836l114.254 105.338c-7.18-28.538-17.555-59.985-29.848-86.75-11.673-25.418-25.249-46.657-37.514-57.024-6.132-5.183-11.56-7.488-16.097-7.635zM92.528 82.122L82.124 92.526 243.58 267.651l24.072-24.072L92.528 82.122zm-24.357 21.826c-.929.21-1.857.42-2.836.654-14.267 3.407-30.406 9.662-35.993 15.248-5.813 5.813-7.39 10.355-7.244 14.893.147 4.538 2.452 9.965 7.635 16.098 10.367 12.265 31.608 25.842 57.025 37.515 26.766 12.293 58.211 22.669 86.749 29.848L68.17 103.948zM280.899 255.79l-25.107 25.107 73.265 79.469 31.31-31.31L280.9 255.79zm92.715 85.476l-32.346 32.344 2.07 2.246c.061.058 4.419 4.224 10.585 6.28 6.208 2.069 12.71 2.88 21.902-6.313 9.192-9.192 8.38-15.694 6.31-21.902-2.057-6.174-6.235-10.54-6.283-10.59l-2.238-2.065zm20.172 41.059a46.23 46.23 0 0 1-5.233 6.226 46.241 46.241 0 0 1-6.226 5.235L489.91 489.91l-96.125-107.586z"
-                />
-              </svg>
-              {/* Score de la fléchette */}
-              {hit && (
-                <div className="text-[var(--text-primary)] font-bold text-lg sm:text-2xl mt-1 sm:mt-2 flex flex-col items-center">
-                  <span>{hit.target}</span>
-                  {hit.multiplier > 1 && (
-                    <span className="text-xs sm:text-sm">x{hit.multiplier}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                <svg
+                  width="20"
+                  height="40"
+                  viewBox="0 0 512 512"
+                  className="transition-all duration-200 w-8 h-8 text-[var(--text-primary)]"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M134.745 22.098c-4.538-.146-9.08 1.43-14.893 7.243-5.586 5.586-11.841 21.725-15.248 35.992-.234.979-.444 1.907-.654 2.836l114.254 105.338c-7.18-28.538-17.555-59.985-29.848-86.75-11.673-25.418-25.249-46.657-37.514-57.024-6.132-5.183-11.56-7.488-16.097-7.635zM92.528 82.122L82.124 92.526 243.58 267.651l24.072-24.072L92.528 82.122zm-24.357 21.826c-.929.21-1.857.42-2.836.654-14.267 3.407-30.406 9.662-35.993 15.248-5.813 5.813-7.39 10.355-7.244 14.893.147 4.538 2.452 9.965 7.635 16.098 10.367 12.265 31.608 25.842 57.025 37.515 26.766 12.293 58.211 22.669 86.749 29.848L68.17 103.948zM280.899 255.79l-25.107 25.107 73.265 79.469 31.31-31.31L280.9 255.79zm92.715 85.476l-32.346 32.344 2.07 2.246c.061.058 4.419 4.224 10.585 6.28 6.208 2.069 12.71 2.88 21.902-6.313 9.192-9.192 8.38-15.694 6.31-21.902-2.057-6.174-6.235-10.54-6.283-10.59l-2.238-2.065zm20.172 41.059a46.23 46.23 0 0 1-5.233 6.226 46.241 46.241 0 0 1-6.226 5.235L489.91 489.91l-96.125-107.586z"
+                  />
+                </svg>
+                {/* Score de la fléchette */}
+                {hit && (
+                  <div className="text-[var(--text-primary)] font-bold text-lg sm:text-2xl mt-1 sm:mt-2 flex flex-col items-center">
+                    <span>{hit.target}</span>
+                    {hit.multiplier > 1 && (
+                      <span className="text-xs sm:text-sm">x{hit.multiplier}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Bouton de validation */}
-      {dartHits.length === 3 && (
-        <div className="mt-4 text-center">
-          <button
-            data-testid="validate-score-button"
-            onClick={handleValidateScore}
-            className="game-button"
-          >
-            Valider le score
-          </button>
-        </div>
-      )}
+      <div className="mt-2 mb-8 sm:mt-4 text-center">
+        <button
+          onClick={handleValidateScore}
+          className={`game-button ${dartHits.length < 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={dartHits.length < 3}
+        >
+          Valider le score
+        </button>
+      </div>
 
       {/* Légende */}
-      <div className="absolute right-[-200px] top-[200px] 
-        bg-[var(--glass-bg)] p-4 rounded-lg border border-[var(--neon-primary)]">
-        <h3 className="text-[var(--text-primary)] font-bold mb-2">Légende</h3>
-        <div className="space-y-2">
+      <div className="bg-[var(--glass-bg)] w-64 p-4 rounded-lg border border-[var(--neon-primary)]">
+        <h3 className="text-[var(--text-primary)] text-sm font-bold mb-2">Légende</h3>
+        <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-600/50 rounded"></div>
+            <div className="w-3 h-3 bg-red-600/50 rounded"></div>
             <span className="text-[var(--text-primary)]">Non fermé</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-600/50 rounded"></div>
+            <div className="w-3 h-3 bg-green-600/50 rounded"></div>
             <span className="text-[var(--text-primary)]">Fermé</span>
           </div>
           <div className="flex items-center gap-2">
