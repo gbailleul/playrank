@@ -12,6 +12,7 @@ export interface AroundTheClockPlayerState {
   currentNumber: number;
   throwHistory: AroundTheClockThrow[];
   totalThrows: number;
+  validatedCount: number;
 }
 
 export interface AroundTheClockGameState {

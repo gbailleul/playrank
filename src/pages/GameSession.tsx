@@ -633,13 +633,23 @@ const GameSession: React.FC = () => {
   // Mettre à jour le fetchSession pour initialiser Around the Clock
   useEffect(() => {
     if (session?.game.variant === DartVariant.AROUND_THE_CLOCK) {
-      const initializedPlayers = session.players.map(player => ({
-        id: player.player.id,
-        username: player.player.username,
-        currentNumber: player.aroundTheClockScore?.currentNumber || 1,
-        throwHistory: player.aroundTheClockScore?.throwHistory || [],
-        totalThrows: player.aroundTheClockScore?.throwHistory?.length || 0
-      }));
+      const initializedPlayers = session.players.map(player => {
+        const throwHistory = player.aroundTheClockScore?.throwHistory || [];
+        const validatedNumbers = new Set(
+          throwHistory
+            .filter(t => t.isHit)
+            .map(t => t.number)
+        );
+
+        return {
+          id: player.player.id,
+          username: player.player.username,
+          currentNumber: player.aroundTheClockScore?.currentNumber || 1,
+          throwHistory,
+          totalThrows: throwHistory.length,
+          validatedCount: validatedNumbers.size
+        };
+      });
 
       setAroundTheClockState({
         variant: 'AROUND_THE_CLOCK',
@@ -662,11 +672,19 @@ const GameSession: React.FC = () => {
           setAroundTheClockState(prev => {
             const updatedPlayers = prev.players.map(p => {
               if (p.id === data.playerId) {
+                const throwHistory = data.aroundTheClockScore!.throwHistory;
+                const validatedNumbers = new Set(
+                  throwHistory
+                    .filter(t => t.isHit)
+                    .map(t => t.number)
+                );
+
                 return {
                   ...p,
                   currentNumber: data.aroundTheClockScore!.currentNumber,
                   throwHistory: data.aroundTheClockScore!.throwHistory,
-                  totalThrows: data.aroundTheClockScore!.throwHistory.length
+                  totalThrows: data.aroundTheClockScore!.throwHistory.length,
+                  validatedCount: validatedNumbers.size
                 };
               }
               return p;
@@ -682,7 +700,8 @@ const GameSession: React.FC = () => {
                 if (p.player.id === data.playerId) {
                   return {
                     ...p,
-                    aroundTheClockScore: data.aroundTheClockScore
+                    aroundTheClockScore: data.aroundTheClockScore,
+                    currentScore: data.aroundTheClockScore!.throwHistory.filter(t => t.isHit).length
                   };
                 }
                 return p;
@@ -755,11 +774,7 @@ const GameSession: React.FC = () => {
               <div className="space-y-4">
                 {session?.players.map((player, index) => {
                   const isCurrentPlayer = index === activePlayerIndex;
-                  const isCricket = session.game.variant === DartVariant.CRICKET;
                   const isAroundTheClock = session.game.variant === DartVariant.AROUND_THE_CLOCK;
-                  const cricketPlayer = isCricket 
-                    ? gameState.players.find(p => p.id === player.player.id)
-                    : null;
                   const aroundTheClockPlayer = isAroundTheClock
                     ? aroundTheClockState.players.find(p => p.id === player.player.id)
                     : null;
@@ -786,28 +801,18 @@ const GameSession: React.FC = () => {
                             </span>
                           </div>
                         </div>
-                        {isAroundTheClock ? (
+                        {isAroundTheClock && (
                           <div className="text-right">
-                            <span className="text-2xl font-bold text-[var(--text-primary)]">
-                              {aroundTheClockPlayer?.currentNumber || 1}
-                            </span>
+                            <div className="text-2xl font-bold text-[var(--text-primary)]">
+                              {aroundTheClockPlayer?.validatedCount || 0} / 20
+                            </div>
                             <div className="text-sm text-[var(--text-primary)]/70">
                               {aroundTheClockPlayer?.totalThrows || 0} lancers
                             </div>
-                          </div>
-                        ) : isCricket ? (
-                          <div className="text-right">
-                            <span className="text-2xl font-bold text-[var(--text-primary)]">
-                              {cricketPlayer?.totalPoints || 0}
-                            </span>
                             <div className="text-sm text-[var(--text-primary)]/70">
-                              {Object.values(cricketPlayer?.scores || {}).filter(s => s.hits >= 3).length} cibles fermées
+                              Prochain : {aroundTheClockPlayer?.currentNumber || 1}
                             </div>
                           </div>
-                        ) : (
-                          <span className="text-2xl font-bold text-[var(--text-primary)]">
-                            {player.currentScore}
-                          </span>
                         )}
                       </div>
                     </div>

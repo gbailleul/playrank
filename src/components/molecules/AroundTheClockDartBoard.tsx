@@ -23,6 +23,7 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   const [dartHits, setDartHits] = useState<DartHit[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validatedNumbers, setValidatedNumbers] = useState<Set<number>>(new Set());
+  const [localCurrentNumber, setLocalCurrentNumber] = useState(currentNumber);
 
   // Configuration de la cible
   const boardRadius = 200;
@@ -43,6 +44,11 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
     return null;
   }, [validatedNumbers]);
 
+  // Mettre à jour le localCurrentNumber quand le currentNumber change (nouveau tour)
+  React.useEffect(() => {
+    setLocalCurrentNumber(currentNumber);
+  }, [currentNumber]);
+
   const handleNumberClick = useCallback((number: number, event: React.MouseEvent<SVGElement>) => {
     if (throwsInTurn.length >= 3 || isSubmitting) return;
 
@@ -55,24 +61,41 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
     const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
     const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
 
-    // Une fléchette est toujours considérée comme un hit si elle touche une zone
+    // Le lancer est considéré comme réussi si c'est le numéro courant local
+    const isHit = number === localCurrentNumber;
+
     const newThrow: AroundTheClockThrow = {
       number,
-      isHit: true,
+      isHit,
       timestamp: Date.now()
     };
 
     const newHit: DartHit = {
       x,
       y,
-      isHit: true,
+      isHit,
       number
     };
 
     setThrowsInTurn(prev => [...prev, newThrow]);
     setDartHits(prev => [...prev, newHit]);
-    setValidatedNumbers(prev => new Set([...prev, number]));
-  }, [throwsInTurn, isSubmitting]);
+    
+    // Si on touche le bon numéro, on passe au suivant immédiatement
+    if (isHit) {
+      setValidatedNumbers(prev => {
+        const newValidated = new Set(prev);
+        newValidated.add(number);
+        if (number < 20) {
+          newValidated.add(number + 1);
+        }
+        return newValidated;
+      });
+      // Passer au numéro suivant immédiatement
+      if (localCurrentNumber < 20) {
+        setLocalCurrentNumber(prev => prev + 1);
+      }
+    }
+  }, [throwsInTurn, isSubmitting, localCurrentNumber]);
 
   const handleValidateScore = useCallback(async () => {
     if (throwsInTurn.length === 0 || isSubmitting) return;
@@ -82,6 +105,8 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
       await onScoreClick(throwsInTurn);
       setThrowsInTurn([]);
       setDartHits([]);
+      // Réinitialiser les zones validées quand on change de joueur
+      setValidatedNumbers(new Set());
       onTurnComplete?.();
     } catch (error) {
       console.error('Error submitting throws:', error);
@@ -89,6 +114,24 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
       setIsSubmitting(false);
     }
   }, [throwsInTurn, onScoreClick, onTurnComplete, isSubmitting]);
+
+  // Mettre à jour les zones validées quand le currentNumber change
+  React.useEffect(() => {
+    // Réinitialiser les zones validées
+    const newValidated = new Set<number>();
+    // Ajouter tous les numéros jusqu'au currentNumber - 1 (car ils ont été validés)
+    for (let i = 1; i < currentNumber; i++) {
+      newValidated.add(i);
+    }
+    // Ajouter le currentNumber s'il a été touché dans ce tour
+    if (dartHits.some(hit => hit.number === currentNumber && hit.isHit)) {
+      newValidated.add(currentNumber);
+      if (currentNumber < 20) {
+        newValidated.add(currentNumber + 1);
+      }
+    }
+    setValidatedNumbers(newValidated);
+  }, [currentNumber, dartHits]);
 
   // Calculer la position des numéros autour de la cible
   const getNumberPosition = (number: number) => {
@@ -103,12 +146,12 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   // Générer les sections de la cible
   const generateSections = () => {
     const sections: JSX.Element[] = [];
-    const nextNumber = getNextActivatableNumber();
 
     dartboardNumbers.forEach((number, index) => {
       const isValidated = validatedNumbers.has(number);
-      const isNext = number === nextNumber;
-      const isHit = throwsInTurn.some(t => t.number === number);
+      const isCurrent = number === localCurrentNumber;
+      // On vérifie uniquement si un impact a touché ce numéro et si c'était le bon au moment du lancer
+      const isHit = dartHits.some(hit => hit.number === number && hit.isHit);
       const angle = index * 18 * (Math.PI / 180);
       const startAngle = angle - (9 * Math.PI / 180);
       const endAngle = angle + (9 * Math.PI / 180);
@@ -131,13 +174,13 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
             d={path}
             onClick={(e) => handleNumberClick(number, e)}
             className={`
-              cursor-pointer transition-all duration-200
+              transition-all duration-200 cursor-pointer
               ${isValidated ? 'fill-green-500/30 stroke-green-500 stroke-2' : 
-                isNext ? 'fill-[var(--neon-primary)] stroke-[var(--neon-primary)] stroke-2 animate-pulse' :
-                'fill-[var(--glass-bg-lighter)] stroke-[var(--text-primary)] stroke-1'}
+                isCurrent ? 'fill-[var(--neon-primary)]/20 stroke-[var(--neon-primary)] stroke-2 animate-pulse' :
+                'fill-[var(--glass-bg-lighter)]/50 stroke-[var(--text-primary)]/30 stroke-1'}
               ${isHit ? 'stroke-green-500 stroke-2' : ''}
-              hover:brightness-110
               ${isSubmitting || throwsInTurn.length >= 3 ? 'cursor-not-allowed opacity-50' : ''}
+              hover:brightness-110
             `}
           />
           <text
@@ -147,8 +190,8 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
             dominantBaseline="middle"
             className={`text-sm font-bold fill-current ${
               isValidated ? 'text-green-500' :
-              isNext ? 'text-[var(--neon-primary)]' :
-              'text-[var(--text-primary)]'
+              isCurrent ? 'text-[var(--neon-primary)]' :
+              'text-[var(--text-primary)]/70'
             }`}
             transform={`rotate(${index * 18}, ${getNumberPosition(number).x}, ${getNumberPosition(number).y})`}
           >
@@ -170,14 +213,14 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
           cx={hit.x}
           cy={hit.y}
           r={4}
-          className="fill-green-500 stroke-white stroke-1"
+          className={`${hit.isHit ? 'fill-green-500' : 'fill-red-500'} stroke-white stroke-1`}
         />
         {/* Halo extérieur */}
         <circle
           cx={hit.x}
           cy={hit.y}
           r={6}
-          className="fill-none stroke-green-500 stroke-1 opacity-50"
+          className={`fill-none ${hit.isHit ? 'stroke-green-500' : 'stroke-red-500'} stroke-1 opacity-50`}
         />
       </g>
     ));
