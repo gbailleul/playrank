@@ -25,6 +25,8 @@ import DartBoard from "../components/molecules/DartBoard";
 import { gameService } from "../api/services";
 import VictoryModal from "../components/molecules/VictoryModal";
 import CricketDartBoard from '../components/molecules/CricketDartBoard';
+import type { AroundTheClockGameState, AroundTheClockThrow, AroundTheClockScore } from '../types/aroundTheClock';
+import AroundTheClockDartBoard from '../components/molecules/AroundTheClockDartBoard';
 
 interface CricketScoreTarget {
   hits: number;
@@ -46,6 +48,7 @@ interface ExtendedGameSession extends Omit<GameSession, 'players'> {
     cricketScores?: {
       scores: Record<string, CricketScoreTarget>;
     };
+    aroundTheClockScore?: AroundTheClockScore;
     currentScore?: number;
   }>;
 }
@@ -57,6 +60,7 @@ interface GameUpdateEvent {
   playerId: string;
   score?: Score;
   cricketScore?: any;
+  aroundTheClockScore?: AroundTheClockScore;
   status?: string;
 }
 
@@ -100,6 +104,12 @@ const GameSession: React.FC = () => {
     players: [],
     currentPlayerIndex: 0,
     gameStatus: GameStatus.IN_PROGRESS
+  });
+  const [aroundTheClockState, setAroundTheClockState] = useState<AroundTheClockGameState>({
+    variant: 'AROUND_THE_CLOCK',
+    status: GameStatus.IN_PROGRESS,
+    currentPlayerIndex: 0,
+    players: []
   });
 
   // Fonction utilitaire pour passer au joueur suivant
@@ -554,6 +564,137 @@ const GameSession: React.FC = () => {
     }
   }, [session, activePlayerIndex]);
 
+  // Fonction pour gérer les scores Around the Clock
+  const handleAroundTheClockScore = async (throws: AroundTheClockThrow[]) => {
+    if (!session) return;
+
+    const currentPlayer = session.players[activePlayerIndex];
+    
+    try {
+      const response = await gameService.addAroundTheClockScore(
+        session.game.id,
+        session.id,
+        {
+          playerId: currentPlayer.player.id,
+          ...throws[throws.length - 1]
+        }
+      );
+
+      if (response.data.aroundTheClockScore) {
+        setSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            players: prev.players.map(p => {
+              if (p.player.id === currentPlayer.player.id) {
+                return {
+                  ...p,
+                  aroundTheClockScore: response.data.aroundTheClockScore
+                };
+              }
+              return p;
+            })
+          };
+        });
+
+        // Mettre à jour l'état du jeu
+        setAroundTheClockState(prev => {
+          const updatedPlayers = prev.players.map(p => {
+            if (p.id === currentPlayer.player.id) {
+              return {
+                ...p,
+                currentNumber: response.data.aroundTheClockScore.currentNumber,
+                throwHistory: response.data.aroundTheClockScore.throwHistory,
+                totalThrows: response.data.aroundTheClockScore.throwHistory.length
+              };
+            }
+            return p;
+          });
+
+          return {
+            ...prev,
+            players: updatedPlayers
+          };
+        });
+
+        moveToNextPlayer();
+      }
+    } catch (error) {
+      console.error("Error adding around the clock score:", error);
+      setError('Failed to add score');
+    }
+  };
+
+  // Mettre à jour le fetchSession pour initialiser Around the Clock
+  useEffect(() => {
+    if (session?.game.variant === DartVariant.AROUND_THE_CLOCK) {
+      const initializedPlayers = session.players.map(player => ({
+        id: player.player.id,
+        username: player.player.username,
+        currentNumber: player.aroundTheClockScore?.currentNumber || 1,
+        throwHistory: player.aroundTheClockScore?.throwHistory || [],
+        totalThrows: player.aroundTheClockScore?.throwHistory?.length || 0
+      }));
+
+      setAroundTheClockState({
+        variant: 'AROUND_THE_CLOCK',
+        status: session.status,
+        currentPlayerIndex: activePlayerIndex,
+        players: initializedPlayers,
+        winner: session.winnerId
+      });
+    }
+  }, [session, activePlayerIndex]);
+
+  // Mettre à jour le gestionnaire d'événements WebSocket
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleGameUpdate = (data: GameUpdateEvent) => {
+      console.log('Mise à jour du jeu reçue:', data);
+      if (data.type === 'score_update' && session) {
+        if (data.aroundTheClockScore && session.game.variant === DartVariant.AROUND_THE_CLOCK) {
+          setAroundTheClockState(prev => {
+            const updatedPlayers = prev.players.map(p => {
+              if (p.id === data.playerId) {
+                return {
+                  ...p,
+                  currentNumber: data.aroundTheClockScore!.currentNumber,
+                  throwHistory: data.aroundTheClockScore!.throwHistory,
+                  totalThrows: data.aroundTheClockScore!.throwHistory.length
+                };
+              }
+              return p;
+            });
+            return { ...prev, players: updatedPlayers };
+          });
+
+          setSession(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              players: prev.players.map(p => {
+                if (p.player.id === data.playerId) {
+                  return {
+                    ...p,
+                    aroundTheClockScore: data.aroundTheClockScore
+                  };
+                }
+                return p;
+              })
+            };
+          });
+        }
+        // ... existing cricket and other score handling ...
+      }
+    };
+
+    socket.on('game_update', handleGameUpdate);
+
+    return () => {
+      socket.off('game_update', handleGameUpdate);
+    };
+  }, [socket, session]);
 
   if (loading) {
     return (
@@ -607,11 +748,15 @@ const GameSession: React.FC = () => {
             <h2 className="text-xl font-semibold text-[var(--text-primary)]">Scores</h2>
             <div className="bg-[var(--glass-bg)] rounded-lg p-4">
               <div className="space-y-4">
-                {session.players.map((player, index) => {
+                {session?.players.map((player, index) => {
                   const isCurrentPlayer = index === activePlayerIndex;
                   const isCricket = session.game.variant === DartVariant.CRICKET;
+                  const isAroundTheClock = session.game.variant === DartVariant.AROUND_THE_CLOCK;
                   const cricketPlayer = isCricket 
                     ? gameState.players.find(p => p.id === player.player.id)
+                    : null;
+                  const aroundTheClockPlayer = isAroundTheClock
+                    ? aroundTheClockState.players.find(p => p.id === player.player.id)
                     : null;
 
                   return (
@@ -636,7 +781,16 @@ const GameSession: React.FC = () => {
                             </span>
                           </div>
                         </div>
-                        {isCricket ? (
+                        {isAroundTheClock ? (
+                          <div className="text-right">
+                            <span className="text-2xl font-bold text-[var(--text-primary)]">
+                              {aroundTheClockPlayer?.currentNumber || 1}
+                            </span>
+                            <div className="text-sm text-[var(--text-primary)]/70">
+                              {aroundTheClockPlayer?.totalThrows || 0} lancers
+                            </div>
+                          </div>
+                        ) : isCricket ? (
                           <div className="text-right">
                             <span className="text-2xl font-bold text-[var(--text-primary)]">
                               {cricketPlayer?.totalPoints || 0}
@@ -660,20 +814,29 @@ const GameSession: React.FC = () => {
 
           {/* Zone de jeu */}
           <div className="flex flex-col items-center">
-            {/* Cible de fléchettes */}
-            {session.game.gameType === GameType.DARTS && session.game.variant === DartVariant.CRICKET ? (
-              <CricketDartBoard
-                gameState={gameState}
-                onScoreClick={handleCricketScore}
-                currentPlayerId={session.players[activePlayerIndex].player.id}
-                onTurnComplete={handleTurnComplete}
-              />
-            ) : (
-              <div className="w-full max-w-md mx-auto">
-                <DartBoard 
-                  onScoreSelect={handleScoreSelect}
-                />
-              </div>
+            {session?.game.gameType === GameType.DARTS && (
+              <>
+                {session.game.variant === DartVariant.CRICKET ? (
+                  <CricketDartBoard
+                    gameState={gameState}
+                    onScoreClick={handleCricketScore}
+                    currentPlayerId={session.players[activePlayerIndex].player.id}
+                    onTurnComplete={handleTurnComplete}
+                  />
+                ) : session.game.variant === DartVariant.AROUND_THE_CLOCK ? (
+                  <AroundTheClockDartBoard
+                    currentNumber={aroundTheClockState.players[activePlayerIndex]?.currentNumber || 1}
+                    onScoreClick={handleAroundTheClockScore}
+                    onTurnComplete={handleTurnComplete}
+                  />
+                ) : (
+                  <div className="w-full max-w-md mx-auto">
+                    <DartBoard 
+                      onScoreSelect={handleScoreSelect}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

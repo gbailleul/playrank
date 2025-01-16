@@ -1,5 +1,6 @@
 import type { Game, CreateGameDto, AddScoreData, CricketScoreData } from '../types/index';
 import type { CricketGameStats } from '../types/cricket';
+import type { AddAroundTheClockScoreData } from '../types/aroundTheClock';
 import { dashboardService } from './dashboard';
 import client from './client';
 
@@ -33,6 +34,10 @@ export const gameService = {
       ...data,
       variant: 'CRICKET'
     });
+  },
+
+  addAroundTheClockScore: (gameId: string, sessionId: string, data: AddAroundTheClockScoreData) => {
+    return client.post(`/games/around-the-clock/${gameId}/${sessionId}/score`, data);
   },
 
   endSession: (gameId: string, sessionId: string, winnerId: string, gameStats?: CricketGameStats) => {
