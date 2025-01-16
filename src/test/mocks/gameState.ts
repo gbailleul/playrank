@@ -1,4 +1,5 @@
 import { CricketGameState, CricketTarget } from '../../types/cricket';
+import { GameStatus } from '../../types/game';
 
 export const mockCricketGameState: CricketGameState = {
   players: [
@@ -32,7 +33,7 @@ export const mockCricketGameState: CricketGameState = {
     }
   ],
   currentPlayerIndex: 0,
-  gameStatus: 'IN_PROGRESS'
+  gameStatus: GameStatus.IN_PROGRESS
 };
 
 export const mockCricketTargets: CricketTarget[] = [15, 16, 17, 18, 19, 20, 25]; 

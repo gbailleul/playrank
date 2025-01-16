@@ -25,18 +25,10 @@ import DartBoard from "../components/molecules/DartBoard";
 import { gameService } from "../api/services";
 import VictoryModal from "../components/molecules/VictoryModal";
 import CricketDartBoard from '../components/molecules/CricketDartBoard';
-import CricketRules from '../components/molecules/CricketRules';
 
 interface CricketScoreTarget {
   hits: number;
   points: number;
-}
-
-interface CricketPlayer {
-  id: string;
-  username: string;
-  scores: PlayerCricketScores;
-  totalPoints: number;
 }
 
 interface GameWithSessions extends Game {
@@ -321,28 +313,49 @@ const GameSession: React.FC = () => {
           // Passage au joueur suivant
           moveToNextPlayer();
         }
-        // Gestion des autres variantes
+        // Gestion des autres variantes (301/501)
         else if (data.score) {
+          console.log('Mise à jour du score 501:', {
+            playerId: data.playerId,
+            score: data.score,
+            currentPlayerIndex: activePlayerIndex
+          });
+
           setSession(prev => {
             if (!prev) return prev;
             const updatedPlayers = prev.players.map(p => {
               if (p.user.id === data.playerId && data.score) {
+                const newScore = p.currentScore - data.score.points;
                 return {
                   ...p,
                   scores: [...p.scores, data.score],
-                  currentScore: p.currentScore - data.score.points
+                  currentScore: newScore
                 };
               }
               return p;
             });
+
+            // Trouver le joueur qui vient de jouer
+            const playerIndex = updatedPlayers.findIndex(p => p.user.id === data.playerId);
+            const newScore = updatedPlayers[playerIndex].currentScore;
+
+            // Si ce n'est pas un score gagnant, passer au joueur suivant
+            if (newScore !== 0) {
+              const nextPlayerIndex = (playerIndex + 1) % updatedPlayers.length;
+              console.log('Passage au joueur suivant:', {
+                currentIndex: playerIndex,
+                nextIndex: nextPlayerIndex
+              });
+              setActivePlayerIndex(nextPlayerIndex);
+            } else {
+              console.log('Score gagnant - pas de changement de joueur');
+            }
+
             return {
               ...prev,
               players: updatedPlayers
             };
           });
-
-          // Passage au joueur suivant
-          moveToNextPlayer();
         }
       }
     });
@@ -379,31 +392,11 @@ const GameSession: React.FC = () => {
         isDouble
       };
 
-      const { data } = await gameService.addScore(session.game.id, session.id, scoreData) as ApiResponse<ScoreResponse>;
+      await gameService.addScore(session.game.id, session.id, scoreData);
 
-      if (data.score) {
-        setSession(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            players: prev.players.map(p => {
-              if (p.user.id === currentPlayer.user.id) {
-                return {
-                  ...p,
-                  scores: [...(p.scores || []), data.score],
-                  currentScore: remainingScore
-                };
-              }
-              return p;
-            }),
-          };
-        });
-
-        if (remainingScore === 0) {
-          handleEndGame(currentPlayer.user.id);
-          return;
-        }
-        // Suppression de moveToNextPlayer() ici car il sera géré par l'événement socket
+      // Le changement de joueur est maintenant géré uniquement dans l'événement socket
+      if (remainingScore === 0) {
+        handleEndGame(currentPlayer.user.id);
       }
     } catch (error: any) {
       console.error("Error adding score:", error);
@@ -587,9 +580,11 @@ const GameSession: React.FC = () => {
   };
 
   const handleTurnComplete = () => {
-    // Passer au joueur suivant
-    const nextPlayerIndex = (activePlayerIndex + 1) % session!.players.length;
-    setActivePlayerIndex(nextPlayerIndex);
+    // Cette fonction ne sera utilisée que pour le Cricket
+    if (session?.game.variant === DartVariant.CRICKET) {
+      const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+      setActivePlayerIndex(nextPlayerIndex);
+    }
   };
 
   // Mettre à jour le gameState quand la session change

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { gameService } from '../api/services';
 import type { GameSession, User, PlayerGame } from '../types/index';
 import { UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { GameStatus } from '../types/game';
 
 const GameSetup: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,12 +25,22 @@ const GameSetup: React.FC = () => {
           gameId: data.id,
           game: data,
           players: data.sessions?.[0]?.players || [],
-          status: 'IN_PROGRESS',
+          status: GameStatus.IN_PROGRESS,
           createdAt: new Date(),
           updatedAt: new Date()
         };
         setSession(gameSession);
-        setSelectedPlayers(gameSession.players.map((p: PlayerGame) => p.player));
+        setSelectedPlayers(gameSession.players.map((p: PlayerGame) => ({
+          id: p.playerId,
+          username: p.playerId,
+          email: '',
+          firstName: '',
+          lastName: '',
+          role: 'PLAYER',
+          status: 'ACTIVE',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })));
       } catch (err) {
         setError('Failed to load game session');
       } finally {

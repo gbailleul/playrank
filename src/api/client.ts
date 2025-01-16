@@ -1,13 +1,5 @@
 import axios from 'axios';
 
-// Étendre la configuration Axios pour inclure les retries
-interface RetryConfig {
-  retries?: number;
-  retryDelay?: number;
-  headers: Record<string, string>;
-  [key: string]: any;
-}
-
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const client = axios.create({

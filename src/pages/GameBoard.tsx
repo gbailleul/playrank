@@ -137,7 +137,7 @@ const GameBoard: React.FC = () => {
                   }`}
                 >
                   <h3 className="font-semibold">
-                    {player.player.firstName} {player.player.lastName}
+                    {player.playerId}
                   </h3>
                   <p className="text-2xl font-bold">{calculateRemainingScore(player)}</p>
                   <div className="text-sm space-y-1">
