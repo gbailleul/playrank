@@ -18,7 +18,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { io, Socket } from "socket.io-client";
-import type { GameSession, PlayerGame, Score, AddScoreData, User, Game } from "../types/index";
+import type { GameSession, PlayerGame, Score, AddScoreData, Game } from "../types/index";
 import { GameType, DartVariant, GameStatus } from "../types/game";
 import type { CricketGameState, CricketThrow, CricketScoreData, CricketGameStats, PlayerCricketScores } from '../types/cricket';
 import DartBoard from "../components/molecules/DartBoard";
