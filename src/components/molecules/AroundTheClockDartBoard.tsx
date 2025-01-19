@@ -47,6 +47,13 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   // Mettre à jour le localCurrentNumber quand le currentNumber change (nouveau tour)
   React.useEffect(() => {
     setLocalCurrentNumber(currentNumber);
+    // Réinitialiser les zones validées pour le nouveau joueur
+    const newValidated = new Set<number>();
+    // Ajouter tous les numéros jusqu'au currentNumber - 1 (car ils ont été validés)
+    for (let i = 1; i < currentNumber; i++) {
+      newValidated.add(i);
+    }
+    setValidatedNumbers(newValidated);
   }, [currentNumber]);
 
   const handleNumberClick = useCallback((number: number, event: React.MouseEvent<SVGElement>) => {

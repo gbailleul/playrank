@@ -17,20 +17,31 @@ export interface AroundTheClockPlayerState {
 
 export interface AroundTheClockGameState {
   variant: 'AROUND_THE_CLOCK';
-  status: GameStatus;
+  status: string;
   currentPlayerIndex: number;
-  players: AroundTheClockPlayerState[];
+  players: Array<{
+    id: string;
+    username: string;
+    currentNumber: number;
+    throwHistory: AroundTheClockThrow[];
+    totalThrows: number;
+    validatedCount: number;
+  }>;
   winner?: string;
 }
 
 export interface AroundTheClockScore {
+  id: string;
+  playerGameId: string;
   currentNumber: number;
-  throwHistory: AroundTheClockThrow[];
+  throwHistory: {
+    set: AroundTheClockThrow[];
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AddAroundTheClockScoreData {
   playerId: string;
-  number: number;
-  isHit: boolean;
-  timestamp: number;
+  throws: AroundTheClockThrow[];
 } 

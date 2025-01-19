@@ -209,6 +209,45 @@ const GameSession: React.FC = () => {
             gameStatus: GameStatus.IN_PROGRESS
           });
         }
+        // Si c'est une partie d'Around the Clock, initialiser l'état
+        else if (data.variant === DartVariant.AROUND_THE_CLOCK) {
+          console.log('Around the Clock session data:', extendedSession.players);
+          
+          const initializedPlayers = extendedSession.players.map(player => {
+            // S'assurer que throwHistory est un tableau valide
+            const throwHistory = Array.isArray(player.aroundTheClockScore?.throwHistory) 
+              ? player.aroundTheClockScore.throwHistory 
+              : [];
+            
+            // Calculer les numéros validés
+            const validatedNumbers = new Set(
+              throwHistory
+                .filter((t: AroundTheClockThrow) => t.isHit)
+                .map((t: AroundTheClockThrow) => t.number)
+            );
+            
+            return {
+              id: getPlayerId(player),
+              username: getPlayerUsername(player),
+              currentNumber: player.aroundTheClockScore?.currentNumber || 1,
+              throwHistory: throwHistory,
+              totalThrows: throwHistory.length,
+              validatedCount: validatedNumbers.size
+            };
+          });
+
+          console.log('Setting initial Around the Clock game state:', {
+            players: initializedPlayers,
+            currentPlayerIndex: activePlayerIdx
+          });
+
+          setAroundTheClockState({
+            variant: 'AROUND_THE_CLOCK',
+            status: GameStatus.IN_PROGRESS,
+            currentPlayerIndex: activePlayerIdx,
+            players: initializedPlayers
+          });
+        }
       }
     } catch (err) {
       console.error('Error fetching session:', err);
@@ -248,65 +287,89 @@ const GameSession: React.FC = () => {
     newSocket.on('game_update', (data: GameUpdateEvent) => {
       console.log('Mise à jour du jeu reçue:', data);
       if (data.type === 'score_update' && session) {
-        if (data.cricketScore && session.game.variant === DartVariant.CRICKET) {
-          setGameState(prev => {
-            const updatedPlayers = prev.players.map(p => {
-              if (p.id === data.playerId) {
-                const scores = data.cricketScore.scores as PlayerCricketScores;
-                const totalPoints = Object.values(scores).reduce(
-                  (sum, score) => sum + (score.points || 0),
-                  0
-                );
-                return { ...p, scores, totalPoints };
-              }
-              return p;
-            });
-            return { ...prev, players: updatedPlayers };
-          });
+        if (session.game.variant === DartVariant.AROUND_THE_CLOCK && data.aroundTheClockScore) {
+          setAroundTheClockState(prevState => {
+            const updatedPlayers = prevState.players.map(player => {
+              if (player.id === data.playerId) {
+                // S'assurer que throwHistory est un tableau valide
+                const throwHistory = Array.isArray(data.aroundTheClockScore?.throwHistory) 
+                  ? data.aroundTheClockScore.throwHistory 
+                  : [];
 
-          setSession(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              players: prev.players.map(p => {
-                if (p.player.id === data.playerId) {
-                  return {
-                    ...p,
-                    cricketScores: {
-                      scores: data.cricketScore.scores
-                    }
-                  };
-                }
-                return p;
-              })
-            };
-          });
-          moveToNextPlayer();
-        } else if (data.score) {
-          setSession(prev => {
-            if (!prev) return prev;
-            const updatedPlayers = prev.players.map(p => {
-              if (p.player.id === data.playerId && data.score) {
-                const newScore = p.currentScore - data.score.points;
+                // Calculer les numéros validés
+                const validatedNumbers = new Set(
+                  throwHistory
+                    .filter(t => t.isHit)
+                    .map(t => t.number)
+                );
+
                 return {
-                  ...p,
-                  scores: [...p.scores, data.score],
-                  currentScore: newScore
+                  ...player,
+                  currentNumber: data.aroundTheClockScore?.currentNumber || 1,
+                  throwHistory: throwHistory,
+                  totalThrows: throwHistory.length,
+                  validatedCount: validatedNumbers.size
                 };
               }
-              return p;
+              return player;
             });
 
-            const playerIndex = updatedPlayers.findIndex(p => p.player.id === data.playerId);
-            const newScore = updatedPlayers[playerIndex].currentScore;
-
-            if (newScore !== 0) {
-              const nextPlayerIndex = (playerIndex + 1) % updatedPlayers.length;
-              setActivePlayerIndex(nextPlayerIndex);
-            }
-
-            return { ...prev, players: updatedPlayers };
+            return {
+              ...prevState,
+              players: updatedPlayers
+            };
           });
+        }
+        setSession(prevSession => {
+          if (!prevSession) return null;
+          
+          const updatedPlayers = prevSession.players.map(player => {
+            if (getPlayerId(player) === data.playerId) {
+              // Mise à jour pour Around the Clock
+              if (data.aroundTheClockScore) {
+                // S'assurer que throwHistory est un tableau valide
+                const throwHistory = Array.isArray(data.aroundTheClockScore?.throwHistory) 
+                  ? data.aroundTheClockScore.throwHistory 
+                  : [];
+
+                return {
+                  ...player,
+                  aroundTheClockScore: {
+                    ...data.aroundTheClockScore,
+                    throwHistory
+                  },
+                  currentNumber: data.aroundTheClockScore.currentNumber || 1,
+                  totalThrows: throwHistory.length
+                };
+              }
+              // Autres types de jeu...
+              return player;
+            }
+            return player;
+          });
+
+          return {
+            ...prevSession,
+            players: updatedPlayers
+          };
+        });
+
+        // Mise à jour de l'état Around the Clock
+        if (data.aroundTheClockScore) {
+          setAroundTheClockState(prevState => ({
+            ...prevState,
+            players: prevState.players.map(player => 
+              player.id === data.playerId
+                ? {
+                    ...player,
+                    currentNumber: data.aroundTheClockScore!.currentNumber,
+                    throwHistory: data.aroundTheClockScore!.throwHistory,
+                    totalThrows: data.aroundTheClockScore!.throwHistory.length,
+                    validatedCount: data.aroundTheClockScore!.currentNumber - 1
+                  }
+                : player
+            )
+          }));
         }
       }
     });
@@ -571,58 +634,68 @@ const GameSession: React.FC = () => {
     const currentPlayer = session.players[activePlayerIndex];
     
     try {
-      // Envoyer chaque lancer au backend dans l'ordre
-      for (const throwData of throws) {
-        const response = await gameService.addAroundTheClockScore(
-          session.game.id,
-          session.id,
-          {
-            playerId: currentPlayer.player.id,
-            ...throwData
-          }
-        );
+      console.log('Envoi des lancers:', {
+        gameId: session.game.id,
+        sessionId: session.id,
+        playerId: currentPlayer.player.id,
+        throws: throws
+      });
 
-        const aroundTheClockScore = (response.data as { aroundTheClockScore: AroundTheClockScore }).aroundTheClockScore;
-        if (aroundTheClockScore) {
-          setSession(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              players: prev.players.map(p => {
-                if (p.player.id === currentPlayer.player.id) {
-                  return {
-                    ...p,
-                    aroundTheClockScore
-                  };
-                }
-                return p;
-              })
-            };
-          });
-
-          // Mettre à jour l'état du jeu
-          setAroundTheClockState(prev => {
-            const updatedPlayers = prev.players.map(p => {
-              if (p.id === currentPlayer.player.id) {
-                return {
-                  ...p,
-                  currentNumber: aroundTheClockScore.currentNumber,
-                  throwHistory: aroundTheClockScore.throwHistory,
-                  totalThrows: aroundTheClockScore.throwHistory.length
-                };
-              }
-              return p;
-            });
-
-            return {
-              ...prev,
-              players: updatedPlayers
-            };
-          });
+      const response = await gameService.addAroundTheClockScore(
+        session.game.id,
+        session.id,
+        {
+          playerId: currentPlayer.player.id,
+          throws: throws
         }
-      }
+      );
 
-      // Passer au joueur suivant seulement après avoir envoyé tous les lancers
+      const score = response.data;
+      console.log('Score reçu:', score);
+
+      // Extraire throwHistory de l'objet 'set'
+      const throwHistory = Array.isArray(score.throwHistory?.set) 
+        ? score.throwHistory.set 
+        : [];
+
+      // Mettre à jour l'état Around the Clock
+      setAroundTheClockState(prev => ({
+        ...prev,
+        players: prev.players.map(player => 
+          player.id === currentPlayer.player.id
+            ? {
+                ...player,
+                currentNumber: score.currentNumber || 1,
+                throwHistory: throwHistory,
+                totalThrows: throwHistory.length,
+                validatedCount: (score.currentNumber || 1) - 1
+              }
+            : player
+        )
+      }));
+
+      // Mettre à jour la session
+      setSession(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          players: prev.players.map(p => {
+            if (p.player.id === currentPlayer.player.id) {
+              return {
+                ...p,
+                aroundTheClockScore: {
+                  ...score,
+                  throwHistory: throwHistory
+                },
+                currentScore: (score.currentNumber || 1) - 1
+              };
+            }
+            return p;
+          })
+        };
+      });
+      
+      // Passer au joueur suivant
       moveToNextPlayer();
     } catch (error) {
       console.error("Error adding around the clock score:", error);
@@ -630,86 +703,68 @@ const GameSession: React.FC = () => {
     }
   };
 
-  // Mettre à jour le fetchSession pour initialiser Around the Clock
-  useEffect(() => {
-    if (session?.game.variant === DartVariant.AROUND_THE_CLOCK) {
-      const initializedPlayers = session.players.map(player => {
-        const throwHistory = player.aroundTheClockScore?.throwHistory || [];
-        const validatedNumbers = new Set(
-          throwHistory
-            .filter(t => t.isHit)
-            .map(t => t.number)
-        );
-
-        return {
-          id: player.player.id,
-          username: player.player.username,
-          currentNumber: player.aroundTheClockScore?.currentNumber || 1,
-          throwHistory,
-          totalThrows: throwHistory.length,
-          validatedCount: validatedNumbers.size
-        };
-      });
-
-      setAroundTheClockState({
-        variant: 'AROUND_THE_CLOCK',
-        status: session.status,
-        currentPlayerIndex: activePlayerIndex,
-        players: initializedPlayers,
-        winner: session.winnerId
-      });
-    }
-  }, [session, activePlayerIndex]);
-
   // Mettre à jour le gestionnaire d'événements WebSocket
   useEffect(() => {
     if (!socket) return;
 
     const handleGameUpdate = (data: GameUpdateEvent) => {
-      console.log('Mise à jour du jeu reçue:', data);
-      if (data.type === 'score_update' && session) {
-        if (data.aroundTheClockScore && session.game.variant === DartVariant.AROUND_THE_CLOCK) {
-          setAroundTheClockState(prev => {
-            const updatedPlayers = prev.players.map(p => {
-              if (p.id === data.playerId) {
-                const throwHistory = data.aroundTheClockScore!.throwHistory;
-                const validatedNumbers = new Set(
-                  throwHistory
-                    .filter(t => t.isHit)
-                    .map(t => t.number)
-                );
+      console.log('WebSocket - Mise à jour du jeu reçue:', data);
+      if (data.type === 'score_update' && session?.game.variant === DartVariant.AROUND_THE_CLOCK && data.aroundTheClockScore) {
+        console.log('WebSocket - Mise à jour du score Around the Clock:', data.aroundTheClockScore);
+        
+        // Mettre à jour l'état Around the Clock
+        const throwHistory = Array.isArray(data.aroundTheClockScore.throwHistory) 
+          ? data.aroundTheClockScore.throwHistory 
+          : [];
+        
+        const validatedNumbers = new Set<number>();
+        let targetNumber = 1;
+        
+        // Parcourir l'historique dans l'ordre pour déterminer les numéros validés
+        throwHistory
+          .sort((a: AroundTheClockThrow, b: AroundTheClockThrow) => a.timestamp - b.timestamp)
+          .forEach((throw_: AroundTheClockThrow) => {
+            if (throw_.isHit && throw_.number === targetNumber) {
+              validatedNumbers.add(targetNumber);
+              targetNumber++;
+            }
+          });
 
+        setAroundTheClockState(prev => ({
+          ...prev,
+          players: prev.players.map(player => 
+            player.id === data.playerId
+              ? {
+                  ...player,
+                  currentNumber: data.aroundTheClockScore!.currentNumber,
+                  throwHistory: throwHistory,
+                  totalThrows: throwHistory.length,
+                  validatedCount: validatedNumbers.size
+                }
+              : player
+          )
+        }));
+
+        // Mettre à jour la session
+        setSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            players: prev.players.map(p => {
+              if (p.player.id === data.playerId) {
                 return {
                   ...p,
-                  currentNumber: data.aroundTheClockScore!.currentNumber,
-                  throwHistory: data.aroundTheClockScore!.throwHistory,
-                  totalThrows: data.aroundTheClockScore!.throwHistory.length,
-                  validatedCount: validatedNumbers.size
+                  aroundTheClockScore: {
+                    ...data.aroundTheClockScore!,
+                    throwHistory: throwHistory
+                  },
+                  currentScore: validatedNumbers.size
                 };
               }
               return p;
-            });
-            return { ...prev, players: updatedPlayers };
-          });
-
-          setSession(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              players: prev.players.map(p => {
-                if (p.player.id === data.playerId) {
-                  return {
-                    ...p,
-                    aroundTheClockScore: data.aroundTheClockScore,
-                    currentScore: data.aroundTheClockScore!.throwHistory.filter(t => t.isHit).length
-                  };
-                }
-                return p;
-              })
-            };
-          });
-        }
-        // ... existing cricket and other score handling ...
+            })
+          };
+        });
       }
     };
 
@@ -718,7 +773,26 @@ const GameSession: React.FC = () => {
     return () => {
       socket.off('game_update', handleGameUpdate);
     };
-  }, [socket, session]);
+  }, [socket, session?.game.variant]);
+
+  // Rejoindre la room du jeu quand le socket est connecté
+  useEffect(() => {
+    if (!socket || !session) return;
+
+    console.log('WebSocket - Tentative de rejoindre la room du jeu:', session.game.id);
+    socket.emit('join_game', {
+      gameId: session.game.id,
+      playerId: user?.id
+    });
+
+    return () => {
+      console.log('WebSocket - Quitter la room du jeu:', session.game.id);
+      socket.emit('leave_game', {
+        gameId: session.game.id,
+        playerId: user?.id
+      });
+    };
+  }, [socket, session, user]);
 
   if (loading) {
     return (
@@ -775,6 +849,7 @@ const GameSession: React.FC = () => {
                 {session?.players.map((player, index) => {
                   const isCurrentPlayer = index === activePlayerIndex;
                   const isAroundTheClock = session.game.variant === DartVariant.AROUND_THE_CLOCK;
+                  const isCricket = session.game.variant === DartVariant.CRICKET;
                   const aroundTheClockPlayer = isAroundTheClock
                     ? aroundTheClockState.players.find(p => p.id === player.player.id)
                     : null;
@@ -801,6 +876,7 @@ const GameSession: React.FC = () => {
                             </span>
                           </div>
                         </div>
+                        {/* Score pour Around the Clock */}
                         {isAroundTheClock && (
                           <div className="text-right">
                             <div className="text-2xl font-bold text-[var(--text-primary)]">
@@ -811,6 +887,27 @@ const GameSession: React.FC = () => {
                             </div>
                             <div className="text-sm text-[var(--text-primary)]/70">
                               Prochain : {aroundTheClockPlayer?.currentNumber || 1}
+                            </div>
+                          </div>
+                        )}
+                        {/* Score pour Cricket */}
+                        {isCricket && (
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-[var(--text-primary)]">
+                              {Object.values(gameState.players.find(p => p.id === player.player.id)?.scores || {})
+                                .reduce((sum, score) => sum + (score.points || 0), 0)} pts
+                            </div>
+                            <div className="text-sm text-[var(--text-primary)]/70">
+                              {Object.values(gameState.players.find(p => p.id === player.player.id)?.scores || {})
+                                .filter(score => score.hits >= 3).length} cibles fermées
+                            </div>
+                          </div>
+                        )}
+                        {/* Score pour 301/501 */}
+                        {!isAroundTheClock && !isCricket && (
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-[var(--text-primary)]">
+                              {player.currentScore}
                             </div>
                           </div>
                         )}
@@ -835,7 +932,11 @@ const GameSession: React.FC = () => {
                   />
                 ) : session.game.variant === DartVariant.AROUND_THE_CLOCK ? (
                   <AroundTheClockDartBoard
-                    currentNumber={aroundTheClockState.players[activePlayerIndex]?.currentNumber || 1}
+                    currentNumber={
+                      aroundTheClockState.players.find(
+                        p => p.id === session.players[activePlayerIndex].player.id
+                      )?.currentNumber || 1
+                    }
                     onScoreClick={handleAroundTheClockScore}
                     onTurnComplete={handleTurnComplete}
                   />
