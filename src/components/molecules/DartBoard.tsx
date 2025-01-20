@@ -53,12 +53,16 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
   };
 
   const handleValidate = () => {
+    console.log('handleValidate called, dartHits:', dartHits);
     // Calculer le score total des 3 fléchettes
     const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
+    console.log('Total score calculated:', totalScore);
     // Vérifier si l'un des lancers est un double ou un triple
     const hasMultiplier = dartHits.some(hit => hit.multiplier >= 2);
+    console.log('Has multiplier:', hasMultiplier);
     // Appeler la fonction du parent avec le score total et l'info du multiplicateur
     onScoreSelect(totalScore, hasMultiplier);
+    console.log('Score submitted to parent');
     // Réinitialiser les fléchettes
     setDartHits([]);
   };

@@ -64,13 +64,13 @@ const CreateGame: React.FC = () => {
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const { data } = await auth.getAllPlayers();
-        const availablePlayers = data.filter(
-          player => 
-            player.id !== currentUser?.id && 
-            player.status === 'ACTIVE' &&
-            player.role === 'PLAYER'
+        const response = await auth.getAllPlayers();
+        console.log('Raw API Response:', response.data);
+        
+        const availablePlayers = response.data.filter(
+          player => player.id !== currentUser?.id // On garde uniquement le filtre pour exclure l'utilisateur courant
         );
+        console.log('Available players:', availablePlayers);
         setAllPlayers(availablePlayers);
       } catch (err) {
         console.error('Error fetching players:', err);
@@ -83,11 +83,24 @@ const CreateGame: React.FC = () => {
     fetchPlayers();
   }, [currentUser?.id]);
 
-  const filteredPlayers = allPlayers.filter(player => 
-    !selectedPlayers.some(selected => selected.id === player.id) &&
-    (player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     player.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredPlayers = allPlayers.filter(player => {
+    const searchTermLower = searchTerm.toLowerCase();
+    const playerNameLower = `${player.firstName} ${player.lastName}`.toLowerCase();
+    const isNotSelected = !selectedPlayers.some(selected => selected.id === player.id);
+    const matchesSearch = playerNameLower.includes(searchTermLower);
+    
+    console.log('Player:', player.firstName, player.lastName);
+    console.log('Search term:', searchTermLower);
+    console.log('Player name:', playerNameLower);
+    console.log('Is not selected:', isNotSelected);
+    console.log('Matches search:', matchesSearch);
+    
+    return isNotSelected && matchesSearch;
+  });
+
+  console.log('Search term:', searchTerm);
+  console.log('All players:', allPlayers);
+  console.log('Filtered players:', filteredPlayers);
 
   const handleAddPlayer = (player: User) => {
     // Vérifier si l'ajout du joueur ne dépasse pas la limite (4 joueurs au total)
@@ -208,28 +221,34 @@ const CreateGame: React.FC = () => {
                 className="game-input w-full"
                 aria-label="Rechercher un joueur"
               />
-              {searchTerm && filteredPlayers.length > 0 && (
+              {searchTerm.length > 0 && (
                 <div className="absolute z-50 w-full mt-2 game-card max-h-60 overflow-auto">
-                  {filteredPlayers.map(player => (
-                    <button
-                      key={player.id}
-                      type="button"
-                      onClick={() => handleAddPlayer(player)}
-                      className="w-full p-3 text-left hover:bg-[var(--glass-bg)] flex items-center space-x-3 
-                        text-[var(--text-primary)] transition-all duration-[var(--animation-speed-normal)]
-                        hover:pl-4 group"
-                      disabled={selectedPlayers.length >= 3}
-                    >
-                      <div className="w-8 h-8 flex items-center justify-center border border-[var(--neon-primary)] rounded-full
-                        bg-[var(--glass-bg)] backdrop-blur-sm">
-                        {player.firstName[0]}
-                      </div>
-                      <span className="transition-colors duration-[var(--animation-speed-normal)] 
-                        group-hover:text-[var(--neon-primary)]">
-                        {player.firstName} {player.lastName}
-                      </span>
-                    </button>
-                  ))}
+                  {filteredPlayers.length > 0 ? (
+                    filteredPlayers.map(player => (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => handleAddPlayer(player)}
+                        className="w-full p-3 text-left hover:bg-[var(--glass-bg)] flex items-center space-x-3 
+                          text-[var(--text-primary)] transition-all duration-[var(--animation-speed-normal)]
+                          hover:pl-4 group"
+                        disabled={selectedPlayers.length >= 3}
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center border border-[var(--neon-primary)] rounded-full
+                          bg-[var(--glass-bg)] backdrop-blur-sm">
+                          {player.firstName[0]}
+                        </div>
+                        <span className="transition-colors duration-[var(--animation-speed-normal)] 
+                          group-hover:text-[var(--neon-primary)]">
+                          {player.firstName} {player.lastName}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-3 text-[var(--text-secondary)]">
+                      Aucun joueur trouvé
+                    </div>
+                  )}
                 </div>
               )}
             </div>

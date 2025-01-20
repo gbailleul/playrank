@@ -3,6 +3,7 @@ import type { AroundTheClockThrow } from '../../types/aroundTheClock';
 
 interface Props {
   currentNumber: number;
+  playerId: string;
   onScoreClick: (throws: AroundTheClockThrow[]) => Promise<void>;
   onTurnComplete?: () => void;
 }
@@ -16,6 +17,7 @@ interface DartHit {
 
 const AroundTheClockDartBoard: React.FC<Props> = ({
   currentNumber,
+  playerId,
   onScoreClick,
   onTurnComplete
 }) => {
@@ -68,13 +70,13 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
     const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
     const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
 
-    // Le lancer est considéré comme réussi si c'est le numéro courant local
     const isHit = number === localCurrentNumber;
 
     const newThrow: AroundTheClockThrow = {
       number,
       isHit,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      playerId
     };
 
     const newHit: DartHit = {
@@ -102,7 +104,7 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
         setLocalCurrentNumber(prev => prev + 1);
       }
     }
-  }, [throwsInTurn, isSubmitting, localCurrentNumber]);
+  }, [throwsInTurn, isSubmitting, localCurrentNumber, playerId]);
 
   const handleValidateScore = useCallback(async () => {
     if (throwsInTurn.length === 0 || isSubmitting) return;

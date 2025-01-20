@@ -3,6 +3,6 @@ import client from './client';
 
 export const dashboardService = {
   getDashboard: (page: number = 1) => {
-    return client.get<DashboardResponse>(`/dashboard?page=${page}`);
+    return client.get<DashboardResponse>(`/api/dashboard?page=${page}`);
   }
 }; 

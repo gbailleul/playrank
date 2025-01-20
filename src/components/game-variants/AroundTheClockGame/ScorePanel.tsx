@@ -12,12 +12,12 @@ const ScorePanel: React.FC<ScorePanelProps> = ({ players, activePlayerId }) => {
       <h2 className="text-xl font-semibold text-[var(--text-primary)]">Scores</h2>
       <div className="bg-[var(--glass-bg)] rounded-lg p-4">
         <div className="space-y-4">
-          {players.map(player => {
+          {players.map((player, index) => {
             const isCurrentPlayer = player.id === activePlayerId;
 
             return (
               <div
-                key={player.id}
+                key={`${player.id}-${index}`}
                 className={`p-4 rounded-lg transition-all ${
                   isCurrentPlayer
                     ? 'bg-[var(--neon-primary)]/10 border border-[var(--neon-primary)] shadow-lg'

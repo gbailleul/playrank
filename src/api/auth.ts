@@ -3,19 +3,19 @@ import client from './client';
 
 export const auth = {
   getAllPlayers: () => {
-    return client.get<User[]>('/users/players');
+    return client.get<User[]>('/api/users/players');
   },
 
   getProfile: () => {
-    return client.get<User>('/auth/profile');
+    return client.get<User>('/api/auth/profile');
   },
 
   login: (email: string, password: string) => {
-    return client.post<{ user: User; token: string }>('/auth/login', { email, password });
+    return client.post<{ user: User; token: string }>('/api/auth/login', { email, password });
   },
 
   register: (username: string, firstName: string, lastName: string, email: string, password: string) => {
-    return client.post<{ user: User; token: string }>('/auth/register', {
+    return client.post<{ user: User; token: string }>('/api/auth/register', {
       username,
       firstName,
       lastName,
@@ -25,16 +25,16 @@ export const auth = {
   },
 
   forgotPassword: (email: string) => {
-    return client.post('/auth/forgot-password', { email });
+    return client.post('/api/auth/forgot-password', { email });
   },
 
   resetPassword: (token: string, password: string) => {
-    return client.post('/auth/reset-password', { token, password });
+    return client.post('/api/auth/reset-password', { token, password });
   },
 
   logout: async () => {
     try {
-      await client.post('/auth/logout');
+      await client.post('/api/auth/logout');
     } finally {
       localStorage.removeItem('token');
     }
@@ -43,7 +43,7 @@ export const auth = {
   updateAvatar: (avatarData: string | File) => {
     const formData = new FormData();
     formData.append('avatar', avatarData);
-    return client.post<{ avatarUrl: string }>('/users/avatar', formData, {
+    return client.post<{ avatarUrl: string }>('/api/users/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -17,7 +17,7 @@
  */
 
 import React, { useState } from 'react';
-import { CricketGameState, CricketTarget } from '../../types/cricket';
+import { CricketGameState } from '../../types/variants/cricket/types';
 
 /**
  * Props du composant CricketDartBoard
@@ -48,7 +48,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
 }) => {
   const [dartHits, setDartHits] = useState<DartHit[]>([]);
   const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
-  const targets = [15, 16, 17, 18, 19, 20, 25] as CricketTarget[];
+  const targets = [15, 16, 17, 18, 19, 20, 25];
 
   // Les sections de score sur la cible, dans l'ordre horaire en partant du haut (20)
   const sections = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
@@ -93,7 +93,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
    * @param target - Numéro de la cible
    * @returns Objet contenant le statut de fermeture et le nombre de hits
    */
-  const getTargetStatus = (target: CricketTarget) => {
+  const getTargetStatus = (target: number) => {
     const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
     if (!currentPlayer?.scores) {
       return { closed: false, hits: 0 };
@@ -164,8 +164,8 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
     ];
 
     const isEvenSection = index % 2 === 0;
-    const isCricketTarget = targets.includes(score as CricketTarget);
-    const status = isCricketTarget ? getTargetStatus(score as CricketTarget) : undefined;
+    const isCricketTarget = targets.includes(score);
+    const status = isCricketTarget ? getTargetStatus(score) : undefined;
 
     const getBaseColor = () => {
       if (!isCricketTarget) return isEvenSection ? "fill-[#1a1a1a]" : "fill-[#000]";
@@ -221,21 +221,37 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
     );
   };
 
-  const handleValidateScore = () => {
-    // Collect all valid throws
-    const validThrows = dartHits
-      .filter(hit => !hit.isMiss)
-      .map(hit => ({
-        target: hit.target,
-        multiplier: hit.multiplier
-      }));
-
-    // Send all throws at once
-    onScoreClick(validThrows);
+  const handleMiss = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (dartHits.length >= 3) return;
     
-    // Reset darts and complete turn
-    setDartHits([]);
-    onTurnComplete();
+    // Calculer la position relative du clic dans la zone miss
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    setDartHits(prev => [...prev, { target: 0, multiplier: 0, x, y, isMiss: true }]);
+  };
+
+  const handleValidateScore = () => {
+    // Si on a 3 miss ou des lancers valides
+    if (dartHits.length === 3) {
+      // Ne garder que les lancers valides (non manqués)
+      const validThrows = dartHits
+        .filter(hit => !hit.isMiss)
+        .map(hit => ({
+          target: hit.target,
+          multiplier: hit.multiplier
+        }));
+
+      // S'il y a des lancers valides, les envoyer
+      if (validThrows.length > 0) {
+        onScoreClick(validThrows);
+      }
+      
+      // Reset darts and complete turn
+      setDartHits([]);
+      onTurnComplete();
+    }
   };
 
   return (
@@ -247,28 +263,35 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
           backdrop-blur-sm bg-opacity-20 rounded-lg cursor-crosshair
           hover:bg-opacity-30 hover:border-opacity-30 transition-colors duration-200
           ${dartHits.length >= 3 ? 'pointer-events-none !bg-opacity-10 !border-opacity-10' : ''}`}
-        onClick={(e) => {
-          if (dartHits.length >= 3) return;
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = ((e.clientX - rect.left) / rect.width) * 100;
-          const y = ((e.clientY - rect.top) / rect.height) * 100;
-          const newHit = { target: 0, multiplier: 0, x, y, isMiss: true };
-          setDartHits([...dartHits, newHit]);
-        }}
+        onClick={handleMiss}
       >
-        <span className="absolute top-2 left-2 text-[var(--text-primary)] text-sm sm:text-base font-medium pointer-events-none">
-          Miss
-        </span>
+        {/* Impacts des lancers manqués */}
         {dartHits.filter(hit => hit.isMiss).map((hit, index) => (
           <div
             key={index}
-            className="absolute w-2 h-2 bg-[var(--neon-primary)] rounded-full transform -translate-x-1/2 -translate-y-1/2"
+            className="absolute"
             style={{
-              left: `${hit.x}%`,
-              top: `${hit.y}%`,
+              left: `${hit.x}px`,
+              top: `${hit.y}px`,
+              transform: 'translate(-50%, -50%)'
             }}
-          />
+          >
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+            <div className="absolute -inset-1 border border-white rounded-full opacity-50"></div>
+          </div>
         ))}
+      </div>
+      
+      {/* Affichage des lancers actuels */}
+      <div className="absolute top-4 left-4 bg-black/50 p-2 rounded">
+        <div className="text-white">
+          Lancers: {dartHits.length}/3
+          {dartHits.map((hit, index) => (
+            <span key={index} className="ml-2">
+              {hit.isMiss ? '✗' : '●'}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Container de la cible avec position relative */}
@@ -372,43 +395,20 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         {/* Fléchettes */}
         <div className="flex gap-2 sm:gap-4">
           {[0, 1, 2].map((index) => {
-            const hit = index < dartHits.length ? dartHits[index] : null;
+            const dart = dartHits[index];
             return (
-              <div 
+              <div
                 key={index}
-                data-testid={`dart-indicator-${index + 1}`}
-                className={`flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-gray-700 transition-all duration-300 ${
-                  index < dartHits.length ? 'bg-[var(--glass-bg)]' : 'bg-gray-800 opacity-40'
-                }`}
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center
+                  ${dart ? 'border-[var(--neon-primary)] text-[var(--neon-primary)]' : 'border-gray-600 text-gray-600'}`}
               >
-                <svg
-                  width="20"
-                  height="40"
-                  viewBox="0 0 512 512"
-                  className="transition-all duration-200 w-8 h-8 text-[var(--text-primary)]"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M134.745 22.098c-4.538-.146-9.08 1.43-14.893 7.243-5.586 5.586-11.841 21.725-15.248 35.992-.234.979-.444 1.907-.654 2.836l114.254 105.338c-7.18-28.538-17.555-59.985-29.848-86.75-11.673-25.418-25.249-46.657-37.514-57.024-6.132-5.183-11.56-7.488-16.097-7.635zM92.528 82.122L82.124 92.526 243.58 267.651l24.072-24.072L92.528 82.122zm-24.357 21.826c-.929.21-1.857.42-2.836.654-14.267 3.407-30.406 9.662-35.993 15.248-5.813 5.813-7.39 10.355-7.244 14.893.147 4.538 2.452 9.965 7.635 16.098 10.367 12.265 31.608 25.842 57.025 37.515 26.766 12.293 58.211 22.669 86.749 29.848L68.17 103.948zM280.899 255.79l-25.107 25.107 73.265 79.469 31.31-31.31L280.9 255.79zm92.715 85.476l-32.346 32.344 2.07 2.246c.061.058 4.419 4.224 10.585 6.28 6.208 2.069 12.71 2.88 21.902-6.313 9.192-9.192 8.38-15.694 6.31-21.902-2.057-6.174-6.235-10.54-6.283-10.59l-2.238-2.065zm20.172 41.059a46.23 46.23 0 0 1-5.233 6.226 46.241 46.241 0 0 1-6.226 5.235L489.91 489.91l-96.125-107.586z"
-                  />
-                </svg>
-                {/* Score de la fléchette */}
-                {hit && (
-                  <div className="text-[var(--text-primary)] font-bold text-lg sm:text-2xl mt-1 sm:mt-2 flex flex-col items-center">
-                    <span>{hit.target}</span>
-                    {hit.multiplier > 1 && (
-                      <span className="text-xs sm:text-sm">x{hit.multiplier}</span>
-                    )}
-                  </div>
-                )}
+                {dart ? (dart.isMiss ? '✗' : '●') : index + 1}
               </div>
             );
           })}
         </div>
-      </div>
 
-      {/* Bouton de validation */}
-      <div className="mt-2 mb-8 sm:mt-4 text-center">
+        {/* Bouton de validation */}
         <button
           onClick={handleValidateScore}
           className={`game-button ${dartHits.length < 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -419,7 +419,7 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
       </div>
 
       {/* Légende */}
-      <div className="bg-[var(--glass-bg)] w-64 p-4 rounded-lg border border-[var(--neon-primary)]">
+      <div className="mt-4 bg-[var(--glass-bg)] w-64 p-4 rounded-lg border border-[var(--neon-primary)]">
         <h3 className="text-[var(--text-primary)] text-sm font-bold mb-2">Légende</h3>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">

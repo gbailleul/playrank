@@ -9,11 +9,21 @@ interface ScorePanelProps {
 }
 
 const ScorePanel: React.FC<ScorePanelProps> = ({ session, gameState, activePlayerIndex }) => {
+  if (!gameState || !gameState.players) {
+    return (
+      <div className="grid gap-4">
+        <div className="p-4 rounded-lg bg-gray-800">
+          <div className="text-white">Chargement des scores...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
       {gameState.players.map((player, index) => (
         <div
-          key={player.id}
+          key={`${player.id}-${index}`}
           className={`p-4 rounded-lg ${
             index === activePlayerIndex ? 'bg-purple-900/50 border-2 border-purple-500' : 'bg-gray-800'
           }`}

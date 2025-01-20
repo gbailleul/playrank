@@ -2,7 +2,7 @@ import React from 'react';
 import { GameSession } from '../../../types/base/game';
 import { AroundTheClockGameState, AroundTheClockThrow } from '../../../types/variants/aroundTheClock/types';
 import AroundTheClockDartBoard from '../../molecules/AroundTheClockDartBoard';
-import ScorePanel from './ScorePanel';
+import ScorePanel from '../../../components/game-variants/AroundTheClockGame/ScorePanel';
 
 interface AroundTheClockGameProps {
   session: GameSession;
@@ -34,6 +34,7 @@ export const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({
       <div className="mt-8">
         <AroundTheClockDartBoard
           currentNumber={currentPlayer.currentNumber}
+          playerId={currentPlayer.id}
           onScoreClick={onScoreSubmit}
           onTurnComplete={onTurnComplete}
         />
