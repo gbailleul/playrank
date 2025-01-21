@@ -16,12 +16,37 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
   gameState,
   activePlayerIndex,
   onScoreSubmit,
-}) => {
-  const currentPlayer = gameState.players.find(
-    p => p.id === session.players[activePlayerIndex].playerId
-  );
+}) => {  
+  // Vérifier que session.players existe et que l'index est valide
+  if (!session.players || activePlayerIndex >= session.players.length) {
+    console.log('Invalid session or player index:', { 
+      sessionPlayers: session.players, 
+      activePlayerIndex 
+    });
+    return null;
+  }
 
-  if (!currentPlayer) return null;
+  const sessionPlayer = session.players[activePlayerIndex];
+  if (!sessionPlayer) {
+    console.log('Session player not found:', { activePlayerIndex });
+    return null;
+  }
+
+  const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
+  if (!playerId) {
+    console.log('No player ID found:', { sessionPlayer });
+    return null;
+  }
+
+  const currentPlayer = gameState.players.find(p => p.id === playerId);
+  if (!currentPlayer) {
+    console.log('Player not found:', { 
+      sessionPlayer, 
+      playerId, 
+      gameStatePlayers: gameState.players 
+    });
+    return null;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

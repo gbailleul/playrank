@@ -9,7 +9,7 @@ interface AroundTheClockGameProps {
   gameState: AroundTheClockGameState;
   activePlayerIndex: number;
   onScoreSubmit: (throws: AroundTheClockThrow[]) => Promise<void>;
-  onTurnComplete: () => void;
+  onTurnComplete?: () => void;
 }
 
 export const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({

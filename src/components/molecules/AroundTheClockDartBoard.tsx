@@ -36,16 +36,6 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   // Ordre des numéros sur une cible standard
   const dartboardNumbers = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
 
-  // Trouver le prochain numéro à activer (le plus petit non validé)
-  const getNextActivatableNumber = useCallback(() => {
-    for (let i = 1; i <= 20; i++) {
-      if (!validatedNumbers.has(i)) {
-        return i;
-      }
-    }
-    return null;
-  }, [validatedNumbers]);
-
   // Mettre à jour le localCurrentNumber quand le currentNumber change (nouveau tour)
   React.useEffect(() => {
     setLocalCurrentNumber(currentNumber);
@@ -106,23 +96,20 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
     }
   }, [throwsInTurn, isSubmitting, localCurrentNumber, playerId]);
 
-  const handleValidateScore = useCallback(async () => {
-    if (throwsInTurn.length === 0 || isSubmitting) return;
-
+  const handleSubmit = async () => {
+    if (throwsInTurn.length === 0) return;
+    
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
       await onScoreClick(throwsInTurn);
       setThrowsInTurn([]);
-      setDartHits([]);
-      // Réinitialiser les zones validées quand on change de joueur
-      setValidatedNumbers(new Set());
       onTurnComplete?.();
     } catch (error) {
-      console.error('Error submitting throws:', error);
+      console.error('Error submitting score:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [throwsInTurn, onScoreClick, onTurnComplete, isSubmitting]);
+  };
 
   // Mettre à jour les zones validées quand le currentNumber change
   React.useEffect(() => {
@@ -285,7 +272,7 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
         </div>
 
         <button
-          onClick={handleValidateScore}
+          onClick={handleSubmit}
           disabled={throwsInTurn.length === 0 || isSubmitting}
           className="
             px-6 py-2 rounded-lg bg-[var(--neon-primary)] text-black font-bold

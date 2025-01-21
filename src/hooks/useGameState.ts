@@ -73,7 +73,7 @@ export const useGameState = (
           status: initialSession.status,
           currentPlayerIndex: activePlayerIndex,
           players: initialSession.players.map(player => ({
-            id: player.id,
+            id: player.user?.id || player.guestPlayer?.id || '',
             username: player.user?.username || player.guestPlayer?.name || 'Unknown',
             currentNumber: 1,
             throwHistory: [],
@@ -87,7 +87,7 @@ export const useGameState = (
       default:
         return {
           players: initialSession.players.map(player => ({
-            id: player.id,
+            id: player.user?.id || player.guestPlayer?.id || '',
             username: player.user?.username || player.guestPlayer?.name || 'Unknown',
             scores: player.scores || [],
             currentScore: player.currentScore

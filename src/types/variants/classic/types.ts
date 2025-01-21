@@ -33,4 +33,18 @@ export interface ClassicGameStats {
     totalDoubles: number;
     totalTriples: number;
   }>;
+}
+
+export interface ClassicScoreResponse {
+  data: {
+    players: {
+      id: string;
+      username: string;
+      scores: Score[];
+      currentScore: number;
+    }[];
+    currentPlayerIndex: number;
+    status: GameStatus;
+    winner?: string;
+  };
 } 

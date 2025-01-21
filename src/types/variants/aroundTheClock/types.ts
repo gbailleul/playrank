@@ -1,4 +1,5 @@
 import { GameStatus } from '../../game';
+import { BaseScoreData } from '../../base/game';
 
 export interface AroundTheClockThrow {
   number: number;
@@ -17,11 +18,9 @@ export interface AroundTheClockScore {
   updatedAt: string;
 }
 
-export interface AddAroundTheClockScoreData {
-  playerId: string;
+export interface AddAroundTheClockScoreData extends BaseScoreData {
   throws: AroundTheClockThrow[];
-  currentNumber: number;
-  validatedNumbers: number[];
+  turnNumber: number;
 }
 
 export interface AroundTheClockPlayerState {
@@ -51,5 +50,12 @@ export interface AroundTheClockStateUpdate {
 }
 
 export interface AroundTheClockScoreResponse {
-  data: AroundTheClockScore;
+  data: {
+    players: AroundTheClockPlayerState[];
+    currentPlayerIndex: number;
+    status: GameStatus;
+    variant: 'AROUND_THE_CLOCK';
+    lastUpdateTimestamp: number;
+    winner?: string;
+  };
 } 

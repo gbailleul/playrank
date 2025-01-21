@@ -3,6 +3,7 @@ import type { CricketGameStats } from '../types/cricket';
 import type { AddAroundTheClockScoreData, AroundTheClockScore } from '../types/aroundTheClock';
 import { dashboardService } from './dashboard';
 import client from './client';
+import { AddCricketScoreData, ClassicScoreResponse, CricketScoreResponse, AroundTheClockScoreResponse } from '../types/base/game';
 
 export const gameService = {
   createGame: (data: CreateGameDto) => {
@@ -25,18 +26,14 @@ export const gameService = {
     return client.post<Game>(`/api/games/${gameId}/sessions`, data);
   },
 
-  addScore: (gameId: string, sessionId: string, data: AddScoreData) => {
-    return client.post(`/api/games/classic/${gameId}/sessions/${sessionId}/scores`, data);
-  },
+  addScore: (gameId: string, sessionId: string, data: AddScoreData) =>
+    client.post<ClassicScoreResponse>(`/api/games/classic/${gameId}/sessions/${sessionId}`, data),
 
-  addCricketScore: (gameId: string, sessionId: string, data: CricketScoreData) => {
-    console.log('Sending cricket score data:', data);
-    return client.post(`/api/games/cricket/${gameId}/sessions/${sessionId}/scores`, data);
-  },
+  addCricketScore: (gameId: string, sessionId: string, data: AddCricketScoreData) =>
+    client.post<CricketScoreResponse>(`/api/games/cricket/${gameId}/sessions/${sessionId}`, data),
 
-  addAroundTheClockScore: (gameId: string, sessionId: string, data: AddAroundTheClockScoreData) => {
-    return client.post<AroundTheClockScore>(`/api/games/around-the-clock/${gameId}/sessions/${sessionId}/scores`, data);
-  },
+  addAroundTheClockScore: (gameId: string, sessionId: string, data: AddAroundTheClockScoreData) =>
+    client.post<AroundTheClockScoreResponse>(`/api/games/around-the-clock/${gameId}/sessions/${sessionId}`, data),
 
   endSession: (gameId: string, sessionId: string, winnerId: string, gameStats?: CricketGameStats) => {
     return client.post(`/api/games/${gameId}/sessions/${sessionId}/end`, { 

@@ -72,6 +72,7 @@ export interface AddScoreData {
   turnNumber: number;
   isDouble?: boolean;
   isTriple?: boolean;
+  activePlayerIndex: number;
 }
 
 export interface CricketScoreData {

@@ -28,7 +28,7 @@ import { useGameWebSocket, GameUpdateEvent } from '../hooks/useGameWebSocket';
 import { gameService } from '../api/services';
 import type { CricketThrow, CricketGameState } from '../types/variants/cricket/types';
 import type { AroundTheClockThrow, AroundTheClockGameState } from '../types/variants/aroundTheClock/types';
-import type { ClassicGameState } from '../types/variants/classic/types';
+import type { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
 
 interface User {
   id: string;
@@ -117,144 +117,175 @@ const GameSession: React.FC = () => {
   }, [session, initializeGameState, setGameState]);
 
   // Gestionnaires d'événements
-  const handleClassicScore = async (score: number, isDouble: boolean) => {
-    console.log('handleClassicScore called with:', { score, isDouble });
+  const handleClassicScore = async (points: number) => {
     if (!session || !gameState) {
       console.log('No session or gameState:', { session, gameState });
       return;
     }
 
-    const currentPlayer = session.players[activePlayerIndex] as PlayerInGame;
-    console.log('Current player:', currentPlayer);
-
-    if (!currentPlayer.user) {
-      console.error('No user data for current player');
-      return;
-    }
-
-    const remainingScore = currentPlayer.currentScore - score;
-    console.log('Remaining score:', remainingScore);
-
-    if (remainingScore < 0) {
-      setInfoMessage('Score trop élevé ! Le score ne peut pas être négatif.');
-      setTimeout(() => setInfoMessage(''), 5000);
-      return;
-    }
-
     try {
-      console.log('Sending score to server...');
-      const response = await gameService.addScore(session.game.id, session.id, {
-        playerId: currentPlayer.user.id,
-        points: score,
-        turnNumber: currentPlayer.scores?.length || 0,
-        isDouble
-      });
-      console.log('Score sent successfully, response:', response);
+      const sessionPlayer = session.players[activePlayerIndex];
+      const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
 
-      // Rafraîchir la session pour avoir les données à jour
-      await fetchSession();
-      console.log('Session refreshed');
-
-      // Mettre à jour l'état local avec la réponse du backend
-      const updatedGameState = { ...gameState } as ClassicGameState;
-      const playerState = updatedGameState.players.find(p => p.id === currentPlayer.user.id);
-      if (playerState) {
-        playerState.currentScore = response.data.currentScore;
-        setGameState(updatedGameState);
-        console.log('Game state updated with backend response');
+      if (!playerId) {
+        console.error('No player ID found');
+        return;
       }
 
-      if (response.data.currentScore === 0) {
-        console.log('Game won! Handling end game...');
-        handleEndGame(currentPlayer.user.id);
-      } else {
-        // Incrémenter l'index du joueur actif sans changer l'ordre d'affichage
-        setActivePlayerIndex((prevIndex: number) => (prevIndex + 1) % session.players.length);
-        console.log('Active player index updated');
+      // Calculate the correct turn number based on existing scores
+      const playerState = gameState.players.find(p => p.id === playerId) as ClassicPlayerState;
+      const turnNumber = playerState?.scores 
+        ? Math.max(...playerState.scores.map((s: { turnNumber: number }) => s.turnNumber), 0) + 1 
+        : 1;
+
+      console.log('Submitting score:', { playerId, points, activePlayerIndex, turnNumber });
+      const response = await gameService.addScore(session.game.id, session.id, {
+        playerId,
+        points,
+        turnNumber,
+        activePlayerIndex
+      });
+
+      console.log('Score submission response:', response.data);
+      if (response.data) {
+        const { players, gameStatus, winner } = response.data;
+        
+        // Calculate next player locally
+        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+        
+        // Update the game state with the new data, maintaining original player order
+        const updatedGameState: ClassicGameState = {
+          players: session.players.map(sessionPlayer => {
+            const player = players.find(p => 
+              (sessionPlayer.user?.id === p.id) || (sessionPlayer.guestPlayer?.id === p.id)
+            );
+            return {
+              id: sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id || '',
+              username: sessionPlayer.user?.username || sessionPlayer.guestPlayer?.name || 'Unknown',
+              scores: player?.scores || [],
+              currentScore: player?.currentScore || session.game.maxScore
+            };
+          }),
+          currentPlayerIndex: nextPlayerIndex,
+          gameStatus,
+          winner
+        };
+        
+        console.log('Updated game state:', updatedGameState);
+        setGameState(updatedGameState);
+        setActivePlayerIndex(nextPlayerIndex);
+
+        // Fetch the latest session data
+        await fetchSession();
+
+        if (gameStatus === GameStatus.COMPLETED && winner) {
+          handleEndGame(winner);
+        }
       }
     } catch (error) {
-      console.error('Error sending score:', error);
-      setInfoMessage('Erreur lors de l\'envoi du score');
-      setTimeout(() => setInfoMessage(''), 5000);
+      console.error('Error submitting score:', error);
     }
   };
 
   const handleCricketScore = async (throws: CricketThrow[]) => {
-    if (!session || !gameState) return;
-
-    const currentPlayer = session.players[activePlayerIndex] as PlayerInGame;
-    if (!currentPlayer.user) {
-      console.error('No user data for current player');
+    if (!session || !gameState) {
+      console.log('No session or gameState:', { session, gameState });
       return;
     }
 
     try {
-      console.log('Sending cricket score:', throws);
-      const response = await gameService.addCricketScore(session.game.id, session.id, {
-        playerId: currentPlayer.user.id,
-        throws,
-        turnNumber: currentPlayer.scores?.length || 0
-      });
-      console.log('Cricket score response:', response);
+      const sessionPlayer = session.players[activePlayerIndex];
+      const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
 
-      // Rafraîchir la session pour avoir les données à jour
-      await fetchSession();
-      console.log('Session refreshed after cricket score');
-
-      // Mettre à jour le state du jeu avec les nouvelles données
-      const state = initializeGameState();
-      if (state) {
-        console.log('Setting new game state after score:', state);
-        setGameState(state);
-
-        // Vérifier si le joueur a gagné
-        const cricketState = state as CricketGameState;
-        const playerState = cricketState.players.find(p => p.id === currentPlayer.user?.id);
-        if (playerState) {
-          const allTargetsClosed = Object.values(playerState.scores).every(score => score.hits >= 3);
-          const hasHighestScore = cricketState.players.every(
-            p => p.id === playerState.id || playerState.totalPoints >= p.totalPoints
-          );
-          
-          if (allTargetsClosed && hasHighestScore) {
-            handleEndGame(currentPlayer.user.id);
-            return;
-          }
-        }
+      if (!playerId) {
+        console.error('No player ID found');
+        return;
       }
 
-      // Passer au joueur suivant
-      moveToNextPlayer();
-      console.log('Moving to next player');
+      const response = await gameService.addCricketScore(session.game.id, session.id, {
+        playerId,
+        throws,
+        turnNumber: 1,
+        activePlayerIndex
+      });
+
+      if (response.data) {
+        const { players, currentPlayerIndex, gameStatus, winner } = response.data;
+        setGameState(prevState => ({
+          ...prevState,
+          players,
+          currentPlayerIndex,
+          gameStatus,
+          winner
+        }));
+        setActivePlayerIndex(currentPlayerIndex);
+
+        if (gameStatus === 'COMPLETED' && winner) {
+          handleEndGame(winner);
+        }
+      }
     } catch (error) {
-      console.error('Error sending cricket score:', error);
+      console.error('Error submitting cricket score:', error);
       setInfoMessage('Erreur lors de l\'envoi du score');
       setTimeout(() => setInfoMessage(''), 5000);
     }
   };
 
   const handleAroundTheClockScore = async (throws: AroundTheClockThrow[]) => {
-    if (!session || !gameState) return;
+    if (!session || !gameState) {
+      console.log('No session or gameState:', { session, gameState });
+      return;
+    }
 
-    const currentPlayer = session.players[activePlayerIndex];
-    const currentState = gameState as AroundTheClockGameState;
-    const currentPlayerState = currentState.players.find(p => p.id === (currentPlayer.user?.id || currentPlayer.guestPlayer?.id));
-    
-    if (!currentPlayerState) return;
-    
     try {
-      await gameService.addAroundTheClockScore(session.game.id, session.id, {
-        playerId: currentPlayer.user?.id || currentPlayer.guestPlayer?.id || '',
+      const sessionPlayer = session.players[activePlayerIndex];
+      const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
+
+      if (!playerId) {
+        console.error('No player ID found');
+        return;
+      }
+
+      console.log('Submitting score:', { playerId, throws, activePlayerIndex });
+      const response = await gameService.addAroundTheClockScore(session.game.id, session.id, {
+        playerId,
         throws,
-        currentNumber: currentPlayerState.currentNumber,
-        validatedNumbers: Array.from(currentPlayerState.validatedNumbers)
+        turnNumber: 1,
+        activePlayerIndex
       });
 
-      moveToNextPlayer();
+      console.log('Score submission response:', response.data);
+      if (response.data) {
+        const { players, currentPlayerIndex, status, winner } = response.data;
+        
+        // Update the game state with the new data
+        const updatedGameState: AroundTheClockGameState = {
+          ...gameState,
+          players: players.map(player => ({
+            id: player.id,
+            username: player.username,
+            throwHistory: player.throwHistory,
+            currentNumber: player.currentNumber,
+            validatedNumbers: new Set(player.validatedNumbers),
+            totalThrows: player.totalThrows || 0,
+            validatedCount: player.validatedCount || 0
+          })),
+          currentPlayerIndex,
+          status,
+          variant: 'AROUND_THE_CLOCK',
+          lastUpdateTimestamp: Date.now()
+        };
+        
+        console.log('Updated game state:', updatedGameState);
+        setGameState(updatedGameState);
+        setActivePlayerIndex(currentPlayerIndex);
+
+        if (status === 'COMPLETED' && winner) {
+          handleEndGame(winner);
+        }
+      }
     } catch (error) {
-      console.error("Error adding around the clock score:", error);
-      setInfoMessage('Erreur lors de l\'ajout du score');
-      setTimeout(() => setInfoMessage(''), 5000);
+      console.error('Error submitting score:', error);
     }
   };
 
@@ -372,17 +403,15 @@ const GameSession: React.FC = () => {
           gameState={gameState as CricketGameState}
           activePlayerIndex={activePlayerIndex}
           onScoreSubmit={handleCricketScore}
-          onTurnComplete={moveToNextPlayer}
-                  />
-                ) : session.game.variant === DartVariant.AROUND_THE_CLOCK ? (
+        />
+      ) : session.game.variant === DartVariant.AROUND_THE_CLOCK ? (
         <AroundTheClockGame
           session={session}
           gameState={gameState as AroundTheClockGameState}
           activePlayerIndex={activePlayerIndex}
           onScoreSubmit={handleAroundTheClockScore}
-          onTurnComplete={moveToNextPlayer}
-                  />
-                ) : (
+        />
+      ) : (
         <ClassicGame
           session={session}
           gameState={gameState as ClassicGameState}
