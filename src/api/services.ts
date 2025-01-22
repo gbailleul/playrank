@@ -1,9 +1,9 @@
-import type { Game, CreateGameDto, AddScoreData, CricketScoreData } from '../types/index';
-import type { CricketGameStats } from '../types/cricket';
-import type { AddAroundTheClockScoreData, AroundTheClockScore } from '../types/aroundTheClock';
+import type { Game, CreateGameDto, AddScoreData } from '../types/index';
+import type { CricketGameStats } from '../types/variants/cricket/types';
+import type { AddAroundTheClockScoreData, AroundTheClockScoreResponse } from '../types/variants/aroundTheClock/types';
 import { dashboardService } from './dashboard';
 import client from './client';
-import { AddCricketScoreData, ClassicScoreResponse, CricketScoreResponse, AroundTheClockScoreResponse, DartVariant } from '../types/base/game';
+import { AddCricketScoreData, ClassicScoreResponse, CricketScoreResponse } from '../types/base/game';
 
 export const gameService = {
   createGame: (data: CreateGameDto) => {
@@ -32,8 +32,9 @@ export const gameService = {
   addCricketScore: (gameId: string, sessionId: string, data: AddCricketScoreData) =>
     client.post<CricketScoreResponse>(`/api/games/cricket/${gameId}/sessions/${sessionId}/scores`, data),
 
-  addAroundTheClockScore: (gameId: string, sessionId: string, data: AddAroundTheClockScoreData) =>
-    client.post<AroundTheClockScoreResponse>(`/api/games/around-the-clock/${gameId}/sessions/${sessionId}`, data),
+  addAroundTheClockScore: (gameId: string, sessionId: string, data: AddAroundTheClockScoreData) => {
+    return client.post<AroundTheClockScoreResponse>(`/api/games/around-the-clock/${gameId}/sessions/${sessionId}/score`, data);
+  },
 
   endSession: (gameId: string, sessionId: string, winnerId: string, gameStats?: CricketGameStats) => {
     const baseEndpoint = gameStats 

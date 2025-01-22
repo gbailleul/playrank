@@ -27,7 +27,7 @@ import { useGameState } from '../hooks/useGameState';
 import { useGameWebSocket, GameUpdateEvent } from '../hooks/useGameWebSocket';
 import { gameService } from '../api/services';
 import type { CricketThrow, CricketGameState } from '../types/variants/cricket/types';
-import type { AroundTheClockThrow, AroundTheClockGameState } from '../types/variants/aroundTheClock/types';
+import type { AroundTheClockThrow, AroundTheClockGameState, AroundTheClockPlayerState } from '../types/variants/aroundTheClock/types';
 import type { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
 
 interface User {
@@ -244,59 +244,59 @@ const GameSession: React.FC = () => {
 
   const handleAroundTheClockScore = async (throws: AroundTheClockThrow[]) => {
     if (!session || !gameState) {
-      console.log('No session or gameState:', { session, gameState });
+      console.error('No session or game state found');
       return;
     }
 
-    try {
-      const sessionPlayer = session.players[activePlayerIndex];
-      const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
+    const currentPlayer = gameState.players[activePlayerIndex] as AroundTheClockPlayerState;
+    console.log('Current player:', currentPlayer);
 
-      if (!playerId) {
-        console.error('No player ID found');
-        return;
+    // Calculer les numéros validés basés sur les lancers réussis
+    const validatedNumbers = Array.from(currentPlayer.validatedNumbers);
+    throws.forEach(t => {
+      if (t.isHit && !validatedNumbers.includes(t.number)) {
+        validatedNumbers.push(t.number);
       }
+    });
 
-      console.log('Submitting score:', { playerId, throws, activePlayerIndex });
-      const response = await gameService.addAroundTheClockScore(session.game.id, session.id, {
-        playerId,
-        throws,
-        turnNumber: 1,
-        activePlayerIndex
-      });
-
-      console.log('Score submission response:', response.data);
-      if (response.data) {
-        const { players, currentPlayerIndex, status, winner } = response.data;
-        
-        // Update the game state with the new data
-        const updatedGameState: AroundTheClockGameState = {
-          ...gameState,
-          players: players.map(player => ({
-            id: player.id,
-            username: player.username,
-            throwHistory: player.throwHistory,
-            currentNumber: player.currentNumber,
-            validatedNumbers: new Set(player.validatedNumbers),
-            totalThrows: player.totalThrows || 0,
-            validatedCount: player.validatedCount || 0
-          })),
-          currentPlayerIndex,
-          status,
-          variant: 'AROUND_THE_CLOCK',
-          lastUpdateTimestamp: Date.now()
-        };
-        
-        console.log('Updated game state:', updatedGameState);
-        setGameState(updatedGameState);
-        setActivePlayerIndex(currentPlayerIndex);
-
-        if (status === 'COMPLETED' && winner) {
-          handleEndGame(winner);
+    try {
+      const response = await gameService.addAroundTheClockScore(
+        session.game.id,
+        session.id,
+        {
+          playerId: currentPlayer.id,
+          throws,
+          currentNumber: currentPlayer.currentNumber,
+          validatedNumbers: validatedNumbers
         }
+      );
+
+      console.log('Score submission response:', response);
+      if (response.data) {
+        // Mettre à jour l'index du joueur actif
+        setActivePlayerIndex(response.data.data.currentPlayerIndex);
+        // Mettre à jour l'état du jeu avec les nouvelles données
+        setGameState(prevState => {
+          if (!prevState) return prevState;
+          
+          // Convertir les joueurs avec les validatedNumbers en Set
+          const updatedPlayers = response.data.data.players.map(player => ({
+            ...player,
+            validatedNumbers: new Set(player.validatedNumbers)
+          }));
+
+          return {
+            ...prevState,
+            players: updatedPlayers,
+            status: response.data.data.status,
+            currentPlayerIndex: response.data.data.currentPlayerIndex,
+            lastUpdateTimestamp: response.data.data.lastUpdateTimestamp,
+            variant: 'AROUND_THE_CLOCK'
+          } as AroundTheClockGameState;
+        });
       }
     } catch (error) {
-      console.error('Error submitting score:', error);
+      console.error('Error submitting Around the Clock score:', error);
     }
   };
 
@@ -346,7 +346,7 @@ const GameSession: React.FC = () => {
 
     if (winningPlayer) {
       const username = winningPlayer.user?.username || winningPlayer.guestPlayer?.name || 'Unknown';
-      setWinner({ username, id: winnerId });
+      setWinner({ username, id: winningPlayer.user?.id || winningPlayer.guestPlayer?.id || '' });
       setShowVictoryModal(true);
     }
 
@@ -385,11 +385,11 @@ const GameSession: React.FC = () => {
       title={session.game.name}
       infoMessage={infoMessage}
       showVictoryModal={showVictoryModal}
-          winner={winner}
+      winner={winner}
       onVictoryClose={() => {
-            setShowVictoryModal(false);
-            navigate('/dashboard');
-          }}
+        setShowVictoryModal(false);
+        navigate('/dashboard');
+      }}
     >
       {session.game.variant === DartVariant.CRICKET ? (
         <CricketGame

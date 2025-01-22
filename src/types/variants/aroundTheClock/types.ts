@@ -18,9 +18,11 @@ export interface AroundTheClockScore {
   updatedAt: string;
 }
 
-export interface AddAroundTheClockScoreData extends BaseScoreData {
+export interface AddAroundTheClockScoreData {
+  playerId: string;
   throws: AroundTheClockThrow[];
-  turnNumber: number;
+  currentNumber: number;
+  validatedNumbers: number[];
 }
 
 export interface AroundTheClockPlayerState {

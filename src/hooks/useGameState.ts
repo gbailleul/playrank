@@ -108,7 +108,10 @@ export const useGameState = (
       const newState = initializeGameState();
       if (newState) {
         console.log('Setting new game state:', newState);
-        setGameState(newState);
+        setGameState(prevState => ({
+          ...newState,
+          currentPlayerIndex: prevState?.currentPlayerIndex ?? newState.currentPlayerIndex
+        }));
       }
     }
   }, [initialSession, initializeGameState]);
