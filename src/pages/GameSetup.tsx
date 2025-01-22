@@ -19,7 +19,7 @@ const GameSetup: React.FC = () => {
     const fetchSession = async () => {
       try {
         if (!id) return;
-        const { data } = await gameService.getSession(id);
+        const { data } = await gameService.getSession(id, 'default-session');
         const gameSession: GameSession = {
           id: data.id,
           gameId: data.id,
@@ -96,8 +96,14 @@ const GameSetup: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!session) return;
+    
     try {
-      const response = await gameService.createGame(gameData, selectedPlayers);
+      const response = await gameService.createGame({
+        name: session.game.name,
+        variant: session.game.variant,
+        players: selectedPlayers.map(p => p.id)
+      });
       if (response.data) {
         navigate(`/games/${response.data.id}`);
       }

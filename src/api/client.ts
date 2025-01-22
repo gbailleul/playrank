@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-console.log('API Base URL:', BASE_URL);
 
 const client = axios.create({
   baseURL: BASE_URL,
@@ -19,8 +18,6 @@ client.interceptors.request.use((config: any) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  console.log('Making request to:', config.url);
-  console.log('Request headers:', config.headers);
   // Ajouter la configuration des retries
   config.retries = 3;
   config.retryDelay = 1000;
@@ -33,8 +30,6 @@ client.interceptors.request.use((config: any) => {
 // Add response interceptor for error handling and retries
 client.interceptors.response.use(
   (response) => {
-    console.log('Response received from:', response.config.url);
-    console.log('Response status:', response.status);
     return response;
   },
   async (error) => {
@@ -59,7 +54,6 @@ client.interceptors.response.use(
       
       // Gérer les erreurs d'authentification
       if (status === 401) {
-        console.log('Authentication error - token might be invalid');
         // Ne pas rediriger ou supprimer le token si on est sur la page de login
         if (!window.location.pathname.includes('/login')) {
           localStorage.removeItem('token');
@@ -85,7 +79,6 @@ client.interceptors.response.use(
     
     // Si on a encore des retries disponibles
     config.retries -= 1;
-    console.log(`Retrying request to ${config.url} (${config.retries} attempts remaining)`);
     
     // Ne pas réessayer les erreurs 401 sur la page de login
     if (error.response?.status === 401 && window.location.pathname.includes('/login')) {

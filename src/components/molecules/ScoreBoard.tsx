@@ -1,5 +1,4 @@
 import React from 'react';
-import { Player } from '../../types/base/player';
 import { AroundTheClockPlayerState } from '../../types/variants/aroundTheClock/types';
 import { AroundTheClockGameState } from '../../types/variants/aroundTheClock/types';
 

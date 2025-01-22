@@ -258,19 +258,6 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
     }
   };
 
-  const getCurrentPlayerScore = (target: string) => {
-    if (!currentPlayer) {
-      return null;
-    }
-
-    const score = currentPlayer.scores[target];
-    if (!score) {
-      return null;
-    }
-
-    return score;
-  };
-
   return (
     <div className="relative w-full max-w-md mx-auto">
       {/* Zone de Miss - grande zone derrière la cible uniquement */}

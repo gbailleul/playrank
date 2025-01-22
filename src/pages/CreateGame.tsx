@@ -65,12 +65,10 @@ const CreateGame: React.FC = () => {
     const fetchPlayers = async () => {
       try {
         const response = await auth.getAllPlayers();
-        console.log('Raw API Response:', response.data);
         
         const availablePlayers = response.data.filter(
           player => player.id !== currentUser?.id // On garde uniquement le filtre pour exclure l'utilisateur courant
         );
-        console.log('Available players:', availablePlayers);
         setAllPlayers(availablePlayers);
       } catch (err) {
         console.error('Error fetching players:', err);
@@ -89,18 +87,10 @@ const CreateGame: React.FC = () => {
     const isNotSelected = !selectedPlayers.some(selected => selected.id === player.id);
     const matchesSearch = playerNameLower.includes(searchTermLower);
     
-    console.log('Player:', player.firstName, player.lastName);
-    console.log('Search term:', searchTermLower);
-    console.log('Player name:', playerNameLower);
-    console.log('Is not selected:', isNotSelected);
-    console.log('Matches search:', matchesSearch);
     
     return isNotSelected && matchesSearch;
   });
 
-  console.log('Search term:', searchTerm);
-  console.log('All players:', allPlayers);
-  console.log('Filtered players:', filteredPlayers);
 
   const handleAddPlayer = (player: User) => {
     // Vérifier si l'ajout du joueur ne dépasse pas la limite (4 joueurs au total)

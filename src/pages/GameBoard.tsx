@@ -8,10 +8,10 @@ const GameBoard: React.FC = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null);
   const [players, setPlayers] = useState<PlayerGame[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState(0);
   const [currentScore, setCurrentScore] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
 
   useEffect(() => {
     fetchGameData();
@@ -65,7 +65,7 @@ const GameBoard: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const player = players[currentPlayer];
+      const player = players[activePlayerIndex];
       const remainingScore = calculateRemainingScore(player);
 
       if (!isValidScore(currentScore, remainingScore)) {
@@ -89,10 +89,11 @@ const GameBoard: React.FC = () => {
         playerId: player.playerId,
         points: currentScore,
         turnNumber: player.scores.length + 1,
+        activePlayerIndex
       });
 
       // Mettre à jour le joueur suivant
-      setCurrentPlayer((prev) => {
+      setActivePlayerIndex((prev) => {
         // Si le joueur actuel a gagné (score à 0), on ne change pas de joueur
         if (newRemainingScore === 0) {
           return prev;
@@ -133,7 +134,7 @@ const GameBoard: React.FC = () => {
                 <div
                   key={player.playerId}
                   className={`text-center p-4 rounded-lg ${
-                    index === currentPlayer ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-gray-50'
+                    index === activePlayerIndex ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-gray-50'
                   }`}
                 >
                   <h3 className="font-semibold">
