@@ -94,24 +94,15 @@ const GameSetup: React.FC = () => {
     setSelectedPlayers(selectedPlayers.filter(p => p.id !== playerId));
   };
 
-  const handleStartGame = async () => {
-    if (!session) return;
-
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     try {
-      if (selectedPlayers.length < session.game.minPlayers) {
-        setError(`Minimum ${session.game.minPlayers} players required`);
-        return;
+      const response = await gameService.createGame(gameData, selectedPlayers);
+      if (response.data) {
+        navigate(`/games/${response.data.id}`);
       }
-
-      // Update session with selected players
-      await gameService.createGameSession(session.game.id, {
-        players: selectedPlayers.map(p => p.id)
-      });
-
-      // Navigate to the game page
-      navigate(`/games/${session.id}`);
-    } catch (err) {
-      setError('Failed to start game');
+    } catch (error) {
+      console.error('Error creating game:', error);
     }
   };
 
@@ -230,7 +221,7 @@ const GameSetup: React.FC = () => {
             Annuler
           </button>
           <button
-            onClick={handleStartGame}
+            onClick={handleSubmit}
             className="btn-primary"
             disabled={selectedPlayers.length < session.game.minPlayers}
           >

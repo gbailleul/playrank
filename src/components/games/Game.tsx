@@ -1,84 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Game as GameType } from '../../types/base/game';
 import { gameService } from '../../api/services';
+import { PlayerGame } from '../../types/base/player';
 
-interface Player {
-  id: string;
-  username: string;
-  score: number;
-  remaining?: number;
-  isActive: boolean;
+type GameData = GameType & {
+  players: PlayerGame[];
+  status: string;
+};
+
+interface GameProps {
+  onScoreSubmit?: (playerId: string, points: number, turnNumber: number) => Promise<void>;
+  activePlayerIndex: number;
+  onPlayerChange?: (index: number) => void;
 }
 
-interface GameData {
-  id: string;
-  gameType: 'darts' | 'billiards';
-  gameMode: string;
-  players: Player[];
-  status: 'active' | 'completed';
-  winner?: string;
-}
-
-const Game: React.FC = () => {
-  const { gameId } = useParams<{ gameId: string }>();
-  const navigate = useNavigate();
+const Game: React.FC<GameProps> = ({ onScoreSubmit, activePlayerIndex, onPlayerChange }) => {
   const [game, setGame] = useState<GameData | null>(null);
-  const [score, setScore] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchGameData();
-    const interval = setInterval(fetchGameData, 5000); // Poll for updates
-    return () => clearInterval(interval);
-  }, [gameId]);
-
-  const fetchGameData = async () => {
-    try {
-      const response = await gameService.getGame(gameId!);
-      if (response.ok) {
-        setGame(response.data);
+    const fetchGame = async () => {
+      try {
+        const response = await gameService.getGame('game-id');
+        const gameData = response.data;
+        if (gameData) {
+          setGame(gameData as GameData);
+        }
+      } catch (err) {
+        setError('Failed to fetch game');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching game data:', error);
-    }
-  };
+    };
 
-  const handleScoreSubmit = async () => {
-    if (!score || isNaN(Number(score))) {
-      setError('Please enter a valid score');
-      return;
-    }
+    fetchGame();
+  }, []);
 
-    try {
-      const response = await gameService.addScore(gameId!, game!.id, {
-        playerId: game!.players.find(p => p.isActive)!.id,
-        points: Number(score),
-        turnNumber: 1,
-        isDouble: false
-      });
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
+  if (!game) return null;
 
-      if (response.ok) {
-        setScore('');
-        setError('');
-        fetchGameData();
-      } else {
-        const data = await response.json();
-        setError(data.message || 'Error submitting score');
-      }
-    } catch (error) {
-      console.error('Error submitting score:', error);
-      setError('Error submitting score');
-    }
-  };
+  return (
+    <div>
+      <div>Current Player: {activePlayerIndex + 1}</div>
+      <button onClick={() => onPlayerChange?.((activePlayerIndex + 1) % (game.players.length || 1))}>
+        Next Player
+      </button>
+      <button onClick={() => onScoreSubmit?.(game.players[activePlayerIndex].playerId, 0, 1)}>
+        Submit Score
+      </button>
+    </div>
+  );
+};
 
-  const handleGameEnd = async (winnerId: string) => {
-    try {
-      await gameService.endSession(gameId!, game!.id, winnerId);
-      navigate('/');
-    } catch (error) {
-      console.error('Error ending game:', error);
-    }
-  };
-
-  // ... rest of the component code ...
-}; 
+export default Game; 

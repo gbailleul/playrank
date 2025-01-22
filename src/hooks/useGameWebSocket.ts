@@ -22,7 +22,7 @@ export const useGameWebSocket = (game: Game | null, user: User | null) => {
   useEffect(() => {
     if (!game || !user) return;
 
-    const baseUrl = process.env.NODE_ENV === 'production'
+    const baseUrl = import.meta.env.PROD
       ? 'https://playrank-api.onrender.com'
       : 'http://localhost:3000';
 
