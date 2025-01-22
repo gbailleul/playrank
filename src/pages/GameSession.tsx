@@ -121,10 +121,7 @@ const GameSession: React.FC = () => {
       });
 
       if (response.data) {
-        const { players, gameStatus, winner } = response.data;
-        
-        // Calculate next player locally
-        const nextPlayerIndex = (activePlayerIndex + 1) % session.players.length;
+        const { players, currentPlayerIndex, gameStatus, winner } = response.data;
         
         // Update the game state with the new data, maintaining original player order
         const updatedGameState: ClassicGameState = {
@@ -139,13 +136,13 @@ const GameSession: React.FC = () => {
               currentScore: player?.currentScore || session.game.maxScore
             };
           }),
-          currentPlayerIndex: nextPlayerIndex,
+          currentPlayerIndex,
           gameStatus,
           winner
         };
         
         setGameState(updatedGameState);
-        setActivePlayerIndex(nextPlayerIndex);
+        setActivePlayerIndex(currentPlayerIndex);
 
         // Fetch the latest session data
         await fetchSession();
