@@ -18,7 +18,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DartVariant, GameStatus } from '../types/game';
-import { AroundTheClockGame } from '../components/game-variants/AroundTheClockGame';
+import AroundTheClockGame from '../components/game-variants/AroundTheClockGame';
 import { CricketGame } from '../components/game-variants/CricketGame';
 import { ClassicGame } from '../components/game-variants/ClassicGame';
 import GameLayout from '../components/shared/GameLayout';
@@ -30,21 +30,6 @@ import type { CricketThrow, CricketGameState } from '../types/variants/cricket/t
 import type { AroundTheClockThrow, AroundTheClockGameState, AroundTheClockPlayerState } from '../types/variants/aroundTheClock/types';
 import type { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
 
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  avatarUrl?: string;
-}
-
-interface PlayerInGame {
-  id: string;
-  user: User;
-  currentScore: number;
-  scores: Array<{ id: string }>;
-}
 
 const GameSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -343,7 +328,6 @@ const GameSession: React.FC = () => {
         />
       ) : session.game.variant === DartVariant.AROUND_THE_CLOCK ? (
         <AroundTheClockGame
-          session={session}
           gameState={gameState as AroundTheClockGameState}
           activePlayerIndex={activePlayerIndex}
           onScoreSubmit={handleAroundTheClockScore}

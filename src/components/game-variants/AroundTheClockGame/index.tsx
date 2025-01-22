@@ -1,5 +1,4 @@
 import React from 'react';
-import { GameSession } from '../../../types/base/game';
 import { AroundTheClockGameState, AroundTheClockThrow } from '../../../types/variants/aroundTheClock/types';
 import AroundTheClockDartBoard from '../../molecules/AroundTheClockDartBoard';
 import ScorePanel from '../../../components/game-variants/AroundTheClockGame/ScorePanel';
