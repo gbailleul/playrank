@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameSession } from '../../../types/base/game';
-import { CricketGameState, CricketThrow } from '../../../types/cricket';
+import { CricketGameState, CricketThrow } from '../../../types/variants/cricket/types';
 import CricketDartBoard from '../../molecules/CricketDartBoard';
 import ScorePanel from './ScorePanel';
 
@@ -17,24 +17,27 @@ export const CricketGame: React.FC<CricketGameProps> = ({
   activePlayerIndex,
   onScoreSubmit
 }) => {
-  const currentPlayer = gameState.players.find(
-    p => p.id === session.players[activePlayerIndex].playerId
-  );
-
-  if (!currentPlayer) return null;
+  const currentPlayer = session.players[activePlayerIndex];
+  const currentPlayerId = currentPlayer.user?.id || currentPlayer.guestPlayer?.id || '';
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <ScorePanel
-        players={gameState.players}
-        activePlayerId={currentPlayer.id}
-      />
-      <div className="mt-8">
+    <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="w-full lg:w-1/3">
+        <ScorePanel
+          players={gameState.players}
+          activePlayerId={currentPlayerId}
+        />
+      </div>
+      <div className="w-full lg:w-2/3">
         <CricketDartBoard
-          playerId={currentPlayer.id}
+          gameState={gameState}
+          currentPlayerId={currentPlayerId}
           onScoreClick={onScoreSubmit}
+          onTurnComplete={() => {}}
         />
       </div>
     </div>
   );
-}; 
+};
+
+export default CricketGame; 

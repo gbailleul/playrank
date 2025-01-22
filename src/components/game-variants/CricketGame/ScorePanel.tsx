@@ -1,5 +1,5 @@
 import React from 'react';
-import { CricketGameState } from '../../../types/cricket';
+import { CricketGameState } from '../../../types/variants/cricket/types';
 
 interface ScorePanelProps {
   players: CricketGameState['players'];
@@ -7,41 +7,70 @@ interface ScorePanelProps {
 }
 
 const ScorePanel: React.FC<ScorePanelProps> = ({ players, activePlayerId }) => {
+  // Les cibles du Cricket dans l'ordre
+  const targets = [20, 19, 18, 17, 16, 15, 25];
+
+  // Retourne le symbole pour le nombre de hits
+  const getHitSymbol = (hits: number) => {
+    if (hits === 0) return '';
+    if (hits === 1) return '/';
+    if (hits === 2) return 'X';
+    return '●';
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h2 className="text-xl font-semibold mb-4">Scores</h2>
+    <div className="bg-[var(--glass-bg)] rounded-lg p-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Tableau des scores</h2>
       <div className="space-y-4">
+        {/* En-tête avec les numéros */}
+        <div className="grid grid-cols-[2fr,repeat(7,1fr)] gap-2 items-center border-b border-[var(--border-color)] pb-2">
+          <div className="text-[var(--text-primary)]">Joueur</div>
+          {targets.map(target => (
+            <div key={target} className="text-center text-[var(--text-primary)]">
+              {target}
+            </div>
+          ))}
+        </div>
+
+        {/* Scores des joueurs */}
         {players.map((player) => (
           <div
             key={player.id}
-            className={`p-3 rounded ${
+            className={`grid grid-cols-[2fr,repeat(7,1fr)] gap-2 items-center py-2 ${
               player.id === activePlayerId
-                ? 'bg-blue-100 border-blue-500'
-                : 'bg-gray-50'
+                ? 'bg-[var(--neon-primary)]/10 rounded-lg border border-[var(--neon-primary)] px-2'
+                : ''
             }`}
           >
-            <div className="flex justify-between items-center">
-              <span className="font-medium">{player.username}</span>
-              <span className="text-lg">{player.totalPoints} points</span>
+            {/* Nom et score total */}
+            <div className="flex flex-col">
+              <span className="text-[var(--text-primary)] font-medium">{player.username}</span>
+              <span className="text-sm text-[var(--text-primary)]/70">{player.totalPoints} pts</span>
             </div>
-            <div className="mt-2 grid grid-cols-4 gap-2">
-              {Object.entries(player.scores).map(([target, score]) => (
+
+            {/* Hits pour chaque cible */}
+            {targets.map(target => {
+              const score = player.scores[target];
+              const hits = score?.hits || 0;
+              const points = score?.points || 0;
+              const isClosed = hits >= 3;
+
+              return (
                 <div
                   key={target}
-                  className={`text-center p-1 rounded ${
-                    score.hits >= 3 ? 'bg-green-100' : 'bg-gray-100'
+                  className={`text-center flex flex-col items-center justify-center ${
+                    isClosed ? 'text-green-500' : 'text-[var(--text-primary)]'
                   }`}
                 >
-                  <div className="font-medium">{target}</div>
-                  <div className="text-sm">
-                    {score.hits >= 3 ? '✓' : `${score.hits}/3`}
-                  </div>
-                  {score.points > 0 && (
-                    <div className="text-sm text-green-600">+{score.points}</div>
+                  <span className="font-bold">{getHitSymbol(hits)}</span>
+                  {points > 0 && (
+                    <span className="text-xs text-[var(--text-primary)]/70">
+                      +{points}
+                    </span>
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         ))}
       </div>

@@ -202,22 +202,33 @@ const GameSession: React.FC = () => {
         return;
       }
 
+      console.log('Submitting score for player:', playerId, 'with throws:', throws);
       const response = await gameService.addCricketScore(session.game.id, session.id, {
         playerId,
         throws,
-        turnNumber: 1,
-        activePlayerIndex
+        activePlayerIndex,
+        turnNumber: 1
       });
 
       if (response.data) {
+        console.log('Received response:', response.data);
         const { players, currentPlayerIndex, gameStatus, winner } = response.data;
-        setGameState(prevState => ({
-          ...prevState,
-          players,
+        
+        // Map the players data exactly as received from the server
+        const updatedGameState: CricketGameState = {
+          players: players.map(player => ({
+            id: player.id,
+            username: player.username,
+            scores: player.scores,
+            totalPoints: player.totalPoints
+          })),
           currentPlayerIndex,
           gameStatus,
           winner
-        }));
+        };
+
+        console.log('Setting new game state:', updatedGameState);
+        setGameState(updatedGameState);
         setActivePlayerIndex(currentPlayerIndex);
 
         if (gameStatus === 'COMPLETED' && winner) {
@@ -327,38 +338,21 @@ const GameSession: React.FC = () => {
   };
 
   const handleEndGame = async (winnerId: string) => {
-    if (!session) return;
+    console.log('Handling end game for winner:', winnerId);
+    // Trouver le joueur gagnant dans la session
+    const winningPlayer = session?.players.find(
+      player => (player.user?.id === winnerId) || (player.guestPlayer?.id === winnerId)
+    );
 
-    try {
-      if (session.game.variant === DartVariant.CRICKET) {
-        const stats = calculateCricketStats();
-        if (stats) {
-          await gameService.endSession(session.game.id, session.id, winnerId, stats);
-        } else {
-          await gameService.endSession(session.game.id, session.id, winnerId);
-        }
-      } else {
-        await gameService.endSession(session.game.id, session.id, winnerId);
-      }
-      
-      const winningPlayer = session.players.find(p => p.playerId === winnerId);
-      if (winningPlayer) {
-        setWinner({
-          username: winningPlayer.user?.username || winningPlayer.guestPlayer?.name || 'Unknown',
-          id: winnerId
-        });
-        setShowVictoryModal(true);
-      }
-      
-      socket?.emit('game_update', {
-        type: 'game_status_update',
-        gameId: session.game.id,
-        status: GameStatus.COMPLETED
-      });
-    } catch (error) {
-      console.error('Error ending game:', error);
-      setInfoMessage('Erreur lors de la fin de partie');
-      setTimeout(() => setInfoMessage(''), 5000);
+    if (winningPlayer) {
+      const username = winningPlayer.user?.username || winningPlayer.guestPlayer?.name || 'Unknown';
+      setWinner({ username, id: winnerId });
+      setShowVictoryModal(true);
+    }
+
+    // Mettre à jour le statut de la session
+    if (session?.id) {
+      await endGame(winnerId);
     }
   };
 

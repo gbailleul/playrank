@@ -51,12 +51,15 @@ export const useGameSession = (gameId: string | undefined) => {
         return;
       }
       
-      // Trouver l'index du joueur actif en fonction du nombre de scores
-      const playerScoreCounts = sessionData.players.map((player: PlayerGame) => player.scores?.length || 0);
-      const minScores = Math.min(...playerScoreCounts);
-      const activePlayerIdx = playerScoreCounts.findIndex((count: number) => count === minScores);
+      // Ne mettre à jour l'index du joueur actif que lors de l'initialisation
+      if (activePlayerIndex === 0) {
+        // Trouver l'index du joueur actif en fonction du nombre de scores
+        const playerScoreCounts = sessionData.players.map((player: PlayerGame) => player.scores?.length || 0);
+        const minScores = Math.min(...playerScoreCounts);
+        const activePlayerIdx = playerScoreCounts.findIndex((count: number) => count === minScores);
+        setActivePlayerIndex(activePlayerIdx);
+      }
       
-      setActivePlayerIndex(activePlayerIdx);
       setSession(sessionData);
       setError('');
     } catch (err) {
@@ -65,7 +68,7 @@ export const useGameSession = (gameId: string | undefined) => {
     } finally {
       setLoading(false);
     }
-  }, [gameId]);
+  }, [gameId, activePlayerIndex]);
 
   const moveToNextPlayer = useCallback(() => {
     if (!session?.players) return;

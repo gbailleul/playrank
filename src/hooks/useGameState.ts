@@ -24,9 +24,8 @@ export const useGameState = (
         const cricketState = {
           players: initialSession.players.map(player => {
             console.log('Processing player:', player);
-            console.log('Player cricket scores:', player.cricketScores);
             
-            // Initialiser les scores avec des valeurs par défaut
+            // Utiliser les scores existants ou les scores par défaut
             const defaultScores: Record<string, CricketScoreTarget> = {
               '15': { hits: 0, points: 0 },
               '16': { hits: 0, points: 0 },
@@ -36,23 +35,18 @@ export const useGameState = (
               '20': { hits: 0, points: 0 },
               '25': { hits: 0, points: 0 }
             };
+
+            // Récupérer les scores existants s'ils existent
+            const existingScores = player.cricketScores?.scores as Record<string, CricketScoreTarget> | undefined;
+            const scores = existingScores || defaultScores;
             
-            // Fusionner avec les scores existants s'ils existent
-            const scores = player.cricketScores?.scores
-              ? { ...defaultScores, ...player.cricketScores.scores }
-              : defaultScores;
-            
-            console.log('Final scores for player:', scores);
+            console.log('Scores for player:', scores);
             
             // Calculer les points totaux
             const totalPoints = Object.values(scores).reduce(
-              (sum, score) => {
-                console.log('Adding points:', score.points);
-                return sum + (score.points || 0);
-              }, 
+              (sum, score) => sum + (score.points || 0),
               0
             );
-            console.log('Total points calculated:', totalPoints);
             
             return {
               id: player.user?.id || player.guestPlayer?.id || '',

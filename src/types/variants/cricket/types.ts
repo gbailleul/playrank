@@ -1,5 +1,7 @@
 import { GameStatus } from '../../game';
 
+export type CricketTarget = 15 | 16 | 17 | 18 | 19 | 20 | 25;
+
 export interface CricketScoreTarget {
   hits: number;
   points: number;
