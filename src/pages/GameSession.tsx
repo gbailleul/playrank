@@ -62,7 +62,6 @@ const GameSession: React.FC = () => {
     activePlayerIndex,
     setActivePlayerIndex,
     fetchSession,
-    moveToNextPlayer,
     endGame
   } = useGameSession(id);
 
@@ -83,9 +82,7 @@ const GameSession: React.FC = () => {
     if (!socket) return;
 
     const handleGameUpdate = (event: GameUpdateEvent) => {
-      console.log('WebSocket game update received:', event);
       if (event.type === 'score_update' && event.cricketScore) {
-        console.log('Cricket score update received:', event.cricketScore);
         fetchSession();
       }
     };
@@ -104,14 +101,9 @@ const GameSession: React.FC = () => {
 
   useEffect(() => {
     if (session) {
-      console.log('Session loaded:', session);
       const state = initializeGameState();
-      console.log('Initial game state:', state);
       if (state) {
-        console.log('Setting game state:', state);
         setGameState(state);
-      } else {
-        console.error('Failed to initialize game state');
       }
     }
   }, [session, initializeGameState, setGameState]);
@@ -119,7 +111,6 @@ const GameSession: React.FC = () => {
   // Gestionnaires d'événements
   const handleClassicScore = async (points: number) => {
     if (!session || !gameState) {
-      console.log('No session or gameState:', { session, gameState });
       return;
     }
 
@@ -128,7 +119,6 @@ const GameSession: React.FC = () => {
       const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
 
       if (!playerId) {
-        console.error('No player ID found');
         return;
       }
 
@@ -138,7 +128,6 @@ const GameSession: React.FC = () => {
         ? Math.max(...playerState.scores.map((s: { turnNumber: number }) => s.turnNumber), 0) + 1 
         : 1;
 
-      console.log('Submitting score:', { playerId, points, activePlayerIndex, turnNumber });
       const response = await gameService.addScore(session.game.id, session.id, {
         playerId,
         points,
@@ -146,7 +135,6 @@ const GameSession: React.FC = () => {
         activePlayerIndex
       });
 
-      console.log('Score submission response:', response.data);
       if (response.data) {
         const { players, gameStatus, winner } = response.data;
         
@@ -171,7 +159,6 @@ const GameSession: React.FC = () => {
           winner
         };
         
-        console.log('Updated game state:', updatedGameState);
         setGameState(updatedGameState);
         setActivePlayerIndex(nextPlayerIndex);
 
@@ -189,7 +176,6 @@ const GameSession: React.FC = () => {
 
   const handleCricketScore = async (throws: CricketThrow[]) => {
     if (!session || !gameState) {
-      console.log('No session or gameState:', { session, gameState });
       return;
     }
 
@@ -198,11 +184,9 @@ const GameSession: React.FC = () => {
       const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
 
       if (!playerId) {
-        console.error('No player ID found');
         return;
       }
 
-      console.log('Submitting score for player:', playerId, 'with throws:', throws);
       const response = await gameService.addCricketScore(session.game.id, session.id, {
         playerId,
         throws,
@@ -211,7 +195,6 @@ const GameSession: React.FC = () => {
       });
 
       if (response.data) {
-        console.log('Received response:', response.data);
         const { players, currentPlayerIndex, gameStatus, winner } = response.data;
         
         // Map the players data exactly as received from the server
@@ -227,7 +210,6 @@ const GameSession: React.FC = () => {
           winner
         };
 
-        console.log('Setting new game state:', updatedGameState);
         setGameState(updatedGameState);
         setActivePlayerIndex(currentPlayerIndex);
 
@@ -244,15 +226,15 @@ const GameSession: React.FC = () => {
 
   const handleAroundTheClockScore = async (throws: AroundTheClockThrow[]) => {
     if (!session || !gameState) {
-      console.error('No session or game state found');
       return;
     }
 
     const currentPlayer = gameState.players[activePlayerIndex] as AroundTheClockPlayerState;
-    console.log('Current player:', currentPlayer);
 
     // Calculer les numéros validés basés sur les lancers réussis
-    const validatedNumbers = Array.from(currentPlayer.validatedNumbers);
+    const validatedNumbers = Array.isArray(currentPlayer.validatedNumbers) 
+      ? [...currentPlayer.validatedNumbers]
+      : [];
     throws.forEach(t => {
       if (t.isHit && !validatedNumbers.includes(t.number)) {
         validatedNumbers.push(t.number);
@@ -271,7 +253,6 @@ const GameSession: React.FC = () => {
         }
       );
 
-      console.log('Score submission response:', response);
       if (response.data) {
         // Mettre à jour l'index du joueur actif
         setActivePlayerIndex(response.data.data.currentPlayerIndex);
@@ -279,10 +260,10 @@ const GameSession: React.FC = () => {
         setGameState(prevState => {
           if (!prevState) return prevState;
           
-          // Convertir les joueurs avec les validatedNumbers en Set
+          // Convertir les joueurs avec les validatedNumbers en array
           const updatedPlayers = response.data.data.players.map(player => ({
             ...player,
-            validatedNumbers: new Set(player.validatedNumbers)
+            validatedNumbers: player.validatedNumbers
           }));
 
           return {
@@ -338,7 +319,6 @@ const GameSession: React.FC = () => {
   };
 
   const handleEndGame = async (winnerId: string) => {
-    console.log('Handling end game for winner:', winnerId);
     // Trouver le joueur gagnant dans la session
     const winningPlayer = session?.players.find(
       player => (player.user?.id === winnerId) || (player.guestPlayer?.id === winnerId)

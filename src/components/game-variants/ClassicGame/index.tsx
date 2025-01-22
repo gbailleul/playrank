@@ -19,34 +19,46 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
 }) => {  
   // Vérifier que session.players existe et que l'index est valide
   if (!session.players || activePlayerIndex >= session.players.length) {
-    console.log('Invalid session or player index:', { 
-      sessionPlayers: session.players, 
-      activePlayerIndex 
-    });
     return null;
   }
 
   const sessionPlayer = session.players[activePlayerIndex];
   if (!sessionPlayer) {
-    console.log('Session player not found:', { activePlayerIndex });
     return null;
   }
 
   const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
   if (!playerId) {
-    console.log('No player ID found:', { sessionPlayer });
     return null;
   }
 
   const currentPlayer = gameState.players.find(p => p.id === playerId);
   if (!currentPlayer) {
-    console.log('Player not found:', { 
-      sessionPlayer, 
-      playerId, 
-      gameStatePlayers: gameState.players 
-    });
     return null;
   }
+
+  const handleScoreSubmit = async (points: number) => {
+    if (!session || activePlayerIndex === undefined) {
+      return;
+    }
+
+    const sessionPlayer = session.players[activePlayerIndex];
+    if (!sessionPlayer) {
+      return;
+    }
+
+    const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
+    if (!playerId) {
+      return;
+    }
+
+    const player = gameState.players.find(p => p.id === playerId);
+    if (!player) {
+      return;
+    }
+
+    await onScoreSubmit(points, false);
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -56,7 +68,7 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
         activePlayerIndex={activePlayerIndex}
       />
       <div className="mt-8 w-full max-w-md mx-auto">
-        <DartBoard onScoreSelect={onScoreSubmit} />
+        <DartBoard onScoreSelect={handleScoreSubmit} />
       </div>
     </div>
   );

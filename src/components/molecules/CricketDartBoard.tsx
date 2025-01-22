@@ -99,18 +99,15 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
    */
   const getTargetStatus = (target: number) => {
     if (!currentPlayer) {
-      console.log('No current player found');
       return { closed: false, hits: 0 };
     }
     
     const targetKey = target.toString();
     if (!currentPlayer.scores || !currentPlayer.scores[targetKey]) {
-      console.log('No scores found for target:', target);
       return { closed: false, hits: 0 };
     }
 
     const score = currentPlayer.scores[targetKey];
-    console.log('Target status for', target, ':', score);
     return {
       closed: score.hits >= 3,
       hits: score.hits || 0
@@ -259,6 +256,19 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
       setDartHits([]);
       onTurnComplete();
     }
+  };
+
+  const getCurrentPlayerScore = (target: string) => {
+    if (!currentPlayer) {
+      return null;
+    }
+
+    const score = currentPlayer.scores[target];
+    if (!score) {
+      return null;
+    }
+
+    return score;
   };
 
   return (

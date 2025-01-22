@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GameSession } from '../types/base/game';
 import { DartVariant } from '../types/game';
-import { CricketGameState, CricketPlayerState, CricketScoreTarget } from '../types/variants/cricket/types';
-import { AroundTheClockGameState, AroundTheClockPlayerState } from '../types/variants/aroundTheClock/types';
-import { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
+import { CricketGameState, CricketScoreTarget } from '../types/variants/cricket/types';
+import { AroundTheClockGameState } from '../types/variants/aroundTheClock/types';
+import { ClassicGameState } from '../types/variants/classic/types';
 
 type GameStateType = CricketGameState | AroundTheClockGameState | ClassicGameState;
-type PlayerStateType = CricketPlayerState | AroundTheClockPlayerState | ClassicPlayerState;
 
 export const useGameState = (
   initialSession: GameSession | null,
@@ -20,12 +19,8 @@ export const useGameState = (
 
     switch (variant) {
       case DartVariant.CRICKET:
-        console.log('Initializing Cricket game state with session:', initialSession);
         const cricketState = {
           players: initialSession.players.map(player => {
-            console.log('Processing player:', player);
-            
-            // Utiliser les scores existants ou les scores par défaut
             const defaultScores: Record<string, CricketScoreTarget> = {
               '15': { hits: 0, points: 0 },
               '16': { hits: 0, points: 0 },
@@ -36,13 +31,9 @@ export const useGameState = (
               '25': { hits: 0, points: 0 }
             };
 
-            // Récupérer les scores existants s'ils existent
             const existingScores = player.cricketScores?.scores as Record<string, CricketScoreTarget> | undefined;
             const scores = existingScores || defaultScores;
             
-            console.log('Scores for player:', scores);
-            
-            // Calculer les points totaux
             const totalPoints = Object.values(scores).reduce(
               (sum, score) => sum + (score.points || 0),
               0
@@ -58,21 +49,16 @@ export const useGameState = (
           currentPlayerIndex: activePlayerIndex,
           gameStatus: initialSession.status
         } as CricketGameState;
-        console.log('Created Cricket game state:', cricketState);
         return cricketState;
 
       case DartVariant.AROUND_THE_CLOCK:
-        console.log('Initializing Around the Clock game state with session:', initialSession);
         const aroundTheClockState = {
           variant: 'AROUND_THE_CLOCK',
           status: initialSession.status,
           currentPlayerIndex: activePlayerIndex,
           players: initialSession.players.map(player => {
-            console.log('Processing player:', player);
             const aroundTheClockScore = player.aroundTheClockScore;
-            console.log('Around the Clock score:', aroundTheClockScore);
             
-            // Parse throwHistory and validatedNumbers from JSON strings
             const throwHistory = aroundTheClockScore?.throwHistory 
               ? JSON.parse(aroundTheClockScore.throwHistory as string)
               : [];
@@ -94,7 +80,6 @@ export const useGameState = (
           lastUpdateTimestamp: Date.now(),
           winner: initialSession.winnerId
         } as AroundTheClockGameState;
-        console.log('Created Around the Clock game state:', aroundTheClockState);
         return aroundTheClockState;
 
       default:
@@ -113,10 +98,8 @@ export const useGameState = (
 
   useEffect(() => {
     if (initialSession) {
-      console.log('Session changed, reinitializing game state');
       const newState = initializeGameState();
       if (newState) {
-        console.log('Setting new game state:', newState);
         setGameState(prevState => ({
           ...newState,
           currentPlayerIndex: prevState?.currentPlayerIndex ?? newState.currentPlayerIndex

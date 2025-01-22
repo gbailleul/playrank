@@ -20,44 +20,29 @@ export const useGameWebSocket = (game: Game | null, user: User | null) => {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    if (!game?.id) return;
+    if (!game || !user) return;
 
-    const baseUrl = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api', '') 
-      : 'http://localhost:8000';
-    
-    console.log('Tentative de connexion Socket.IO à:', baseUrl);
-    
-    const newSocket = io(baseUrl, {
-      withCredentials: true,
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      transports: ['websocket']
-    });
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://playrank-api.onrender.com'
+      : 'http://localhost:3000';
 
-    newSocket.on('connect', () => {
-      console.log('Socket.IO connecté avec succès');
-      newSocket.emit('join_game', {
+    const socket = io(baseUrl, {
+      auth: {
+        token: localStorage.getItem('token'),
         gameId: game.id,
-        playerId: user?.id
-      });
+        userId: user.id
+      }
     });
 
-    setSocket(newSocket);
-    
+    socket.on('connect', () => {
+      setSocket(socket);
+    });
+
     return () => {
-      console.log('Nettoyage de la connexion Socket.IO');
-      if (game.id && user?.id) {
-        newSocket.emit('leave_game', {
-          gameId: game.id,
-          playerId: user.id
-        });
-      }
-      newSocket.disconnect();
+      socket.disconnect();
+      setSocket(null);
     };
-  }, [game?.id, user?.id]);
+  }, [game, user]);
 
   return socket;
 }; 
