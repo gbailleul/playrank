@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { gameService } from '../api/services';
 import type { GameSession, User, PlayerGame } from '../types/index';
 import { UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { GameStatus } from '../types/game';
+import { GameStatus, GameType } from '../types/game';
 
 const GameSetup: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -101,11 +101,24 @@ const GameSetup: React.FC = () => {
     try {
       const response = await gameService.createGame({
         name: session.game.name,
-        variant: session.game.variant,
-        players: selectedPlayers.map(p => p.id)
+        description: session.game.description || `Game of ${session.game.variant}`,
+        gameType: GameType.DARTS,
+        maxScore: 20, // For Around the Clock
+        minPlayers: 2,
+        maxPlayers: 4,
+        variant: session.game.variant
       });
+      
       if (response.data) {
-        navigate(`/games/${response.data.id}`);
+        // Create game session with selected players
+        const sessionResponse = await gameService.createGameSession(
+          response.data.id,
+          { players: selectedPlayers.map(p => p.id) }
+        );
+        
+        if (sessionResponse.data) {
+          navigate(`/games/${response.data.id}`);
+        }
       }
     } catch (error) {
       console.error('Error creating game:', error);

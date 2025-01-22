@@ -281,43 +281,6 @@ const GameSession: React.FC = () => {
     }
   };
 
-  const calculateCricketStats = () => {
-    if (!session || !gameState || session.game.variant !== DartVariant.CRICKET) return null;
-
-    const cricketGameState = gameState as CricketGameState;
-    const currentPlayer = session.players[activePlayerIndex] as PlayerInGame;
-    if (!currentPlayer.user) return null;
-
-    const allPlayers = session.players.map(player => {
-      const playerState = cricketGameState.players.find(p => p.id === player.playerId);
-      if (!playerState || !player.user) return null;
-
-      const scores = playerState.scores as Record<string, { hits: number; points: number }>;
-      const closedTargets = Object.values(scores).filter(score => score.hits >= 3).length;
-      const totalHits = Object.values(scores).reduce((sum, score) => sum + score.hits, 0);
-      const totalPoints = playerState.totalPoints;
-
-      return {
-        id: player.user.id,
-        closedTargets,
-        totalPoints,
-        totalHits
-      };
-    }).filter((player): player is NonNullable<typeof player> => player !== null);
-
-    const winner = allPlayers.find(player => player.id === session.winnerId);
-    if (!winner || allPlayers.length === 0) return null;
-
-    const duration = session.updatedAt.getTime() - session.createdAt.getTime();
-
-    return {
-      variant: 'CRICKET' as const,
-      duration,
-      winner,
-      players: allPlayers
-    };
-  };
-
   const handleEndGame = async (winnerId: string) => {
     // Trouver le joueur gagnant dans la session
     const winningPlayer = session?.players.find(

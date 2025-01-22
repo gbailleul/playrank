@@ -6,19 +6,15 @@ import ScorePanel from '../../../components/game-variants/AroundTheClockGame/Sco
 import GameEndDialog from '../../../components/shared/GameEndDialog';
 
 interface AroundTheClockGameProps {
-  session: GameSession;
   gameState: AroundTheClockGameState;
   activePlayerIndex: number;
   onScoreSubmit: (throws: AroundTheClockThrow[]) => Promise<void>;
-  onTurnComplete?: () => void;
 }
 
-export const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({
-  session,
+const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({
   gameState,
   activePlayerIndex,
-  onScoreSubmit,
-  onTurnComplete,
+  onScoreSubmit
 }) => {
   const currentPlayer = gameState.players[activePlayerIndex];
 
@@ -38,7 +34,7 @@ export const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({
             currentNumber={currentPlayer.currentNumber}
             playerId={currentPlayer.id}
             onScoreClick={onScoreSubmit}
-            onTurnComplete={onTurnComplete}
+            onTurnComplete={() => {}}
             validatedNumbers={Array.isArray(currentPlayer.validatedNumbers) ? currentPlayer.validatedNumbers : []}
           />
         </div>
@@ -57,4 +53,6 @@ export const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({
       )}
     </>
   );
-}; 
+};
+
+export default AroundTheClockGame; 
