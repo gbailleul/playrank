@@ -39,6 +39,7 @@ export const AroundTheClockGame: React.FC<AroundTheClockGameProps> = ({
             playerId={currentPlayer.id}
             onScoreClick={onScoreSubmit}
             onTurnComplete={onTurnComplete}
+            validatedNumbers={Array.from(currentPlayer.validatedNumbers)}
           />
         </div>
       </div>

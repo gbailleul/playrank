@@ -6,6 +6,7 @@ interface Props {
   playerId: string;
   onScoreClick: (throws: AroundTheClockThrow[]) => Promise<void>;
   onTurnComplete?: () => void;
+  validatedNumbers: number[];
 }
 
 interface DartHit {
@@ -19,33 +20,20 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
   currentNumber,
   playerId,
   onScoreClick,
-  onTurnComplete
+  onTurnComplete,
+  validatedNumbers = []
 }) => {
   const [throwsInTurn, setThrowsInTurn] = useState<AroundTheClockThrow[]>([]);
   const [dartHits, setDartHits] = useState<DartHit[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validatedNumbers, setValidatedNumbers] = useState<Set<number>>(new Set());
 
   // Configuration de la cible
-  const boardRadius = 200;
-  const centerX = boardRadius;
-  const centerY = boardRadius;
-  const numberRadius = boardRadius * 0.85;
+  const size = window.innerWidth < 640 ? Math.min(window.innerWidth - 32, 300) : 400;
+  const center = size / 2;
+  const radius = size * 0.50;
 
   // Ordre des numéros sur une cible standard
   const dartboardNumbers = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
-
-  // Mettre à jour les numéros validés quand le currentNumber change
-  React.useEffect(() => {
-    const newValidated = new Set<number>();
-    for (let i = 1; i < currentNumber; i++) {
-      newValidated.add(i);
-    }
-    setValidatedNumbers(newValidated);
-    // Reset des lancers quand le numéro courant change
-    setThrowsInTurn([]);
-    setDartHits([]);
-  }, [currentNumber]);
 
   const handleNumberClick = useCallback((number: number, event: React.MouseEvent<SVGElement>) => {
     if (throwsInTurn.length >= 3 || isSubmitting) return;
@@ -59,7 +47,20 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
     const x = ((event.clientX - svgRect.left) / svgRect.width) * viewBox.width;
     const y = ((event.clientY - svgRect.top) / svgRect.height) * viewBox.height;
 
-    const isHit = number === currentNumber;
+    // Vérifier si on peut valider ce numéro
+    // Pour Around the Clock, on peut valider le numéro actuel ou les suivants si on a déjà validé les précédents
+    const validatedInTurn = throwsInTurn
+      .filter(t => t.isHit)
+      .map(t => t.number)
+      .sort((a, b) => a - b);
+
+    let nextValidNumber = currentNumber;
+    if (validatedInTurn.length > 0) {
+      const lastValidated = Math.max(...validatedInTurn);
+      nextValidNumber = lastValidated + 1;
+    }
+
+    const isHit = number === nextValidNumber;
 
     const newThrow: AroundTheClockThrow = {
       number,
@@ -77,14 +78,6 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
 
     setThrowsInTurn(prev => [...prev, newThrow]);
     setDartHits(prev => [...prev, newHit]);
-    
-    if (isHit) {
-      setValidatedNumbers(prev => {
-        const newValidated = new Set(prev);
-        newValidated.add(number);
-        return newValidated;
-      });
-    }
   }, [throwsInTurn, isSubmitting, currentNumber, playerId]);
 
   const handleSubmit = async () => {
@@ -103,96 +96,86 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
     }
   };
 
-  // Calculer la position des numéros autour de la cible
-  const getNumberPosition = (number: number) => {
-    const index = dartboardNumbers.indexOf(number);
-    const angle = (index * 18) * (Math.PI / 180); // 360° / 20 = 18° par section
-    return {
-      x: centerX + numberRadius * Math.sin(angle),
-      y: centerY - numberRadius * Math.cos(angle)
-    };
+  const createSection = (index: number, score: number) => {
+    const angle = 18;
+    const startAngle = index * angle - 99;
+    const endAngle = startAngle + angle;
+    
+    const startRad = (startAngle * Math.PI) / 180;
+    const endRad = (endAngle * Math.PI) / 180;
+
+    const textRadius = radius * 0.94;
+    const textAngle = (startAngle + endAngle) / 2;
+    const textRad = (textAngle * Math.PI) / 180;
+    const textX = center + textRadius * Math.cos(textRad);
+    const textY = center + textRadius * Math.sin(textRad);
+
+    const isEvenSection = index % 2 === 0;
+    const validatedInTurn = throwsInTurn
+      .filter(t => t.isHit)
+      .map(t => t.number)
+      .sort((a, b) => a - b);
+
+    let nextValidNumber = currentNumber;
+    if (validatedInTurn.length > 0) {
+      const lastValidated = Math.max(...validatedInTurn);
+      nextValidNumber = lastValidated + 1;
+    }
+
+    const isCurrent = score === nextValidNumber;
+    const isValidated = validatedNumbers.includes(score) || validatedInTurn.includes(score);
+    const isHit = dartHits.some(hit => hit.number === score && hit.isHit);
+
+    const path = `M ${center} ${center}
+      L ${center + radius * Math.cos(startRad)} ${center + radius * Math.sin(startRad)}
+      A ${radius} ${radius} 0 0 1 ${center + radius * Math.cos(endRad)} ${center + radius * Math.sin(endRad)}
+      Z`;
+
+    return (
+      <g key={score}>
+        <path
+          d={path}
+          onClick={(e) => handleNumberClick(score, e)}
+          className={`
+            cursor-pointer stroke-[#a0a0a0] stroke-1 transition-colors hover:brightness-150 hover:opacity-80
+            ${isValidated ? 'fill-green-500/30 stroke-green-500 stroke-2' :
+              isHit ? 'fill-[var(--neon-primary)] opacity-70' : 
+              isCurrent ? 'fill-[var(--neon-primary)]/20 stroke-[var(--neon-primary)] stroke-2 animate-pulse' :
+              isEvenSection ? "fill-[#1a1a1a]" : "fill-[#000]"}
+            ${isSubmitting || throwsInTurn.length >= 3 ? 'cursor-not-allowed opacity-50' : ''}
+          `}
+        />
+        <text
+          x={textX}
+          y={textY}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className={`text-sm font-bold fill-current ${
+            isValidated ? 'text-green-500' :
+            isCurrent ? 'text-[var(--neon-primary)]' : 'text-[var(--text-primary)]'
+          }`}
+          transform={`rotate(${(startAngle + endAngle) / 2}, ${textX}, ${textY})`}
+        >
+          {score}
+        </text>
+      </g>
+    );
   };
 
-  // Générer les sections de la cible
-  const generateSections = () => {
-    const sections: JSX.Element[] = [];
-
-    dartboardNumbers.forEach((number, index) => {
-      const isValidated = validatedNumbers.has(number);
-      const isCurrent = number === currentNumber;
-      const isNext = !isValidated && number === currentNumber + 1 && validatedNumbers.has(currentNumber);
-      const isHit = dartHits.some(hit => hit.number === number && hit.isHit);
-      const angle = index * 18 * (Math.PI / 180);
-      const startAngle = angle - (9 * Math.PI / 180);
-      const endAngle = angle + (9 * Math.PI / 180);
-
-      // Créer le chemin SVG pour la section
-      const path = [
-        'M', centerX, centerY,
-        'L', 
-        centerX + boardRadius * Math.sin(startAngle),
-        centerY - boardRadius * Math.cos(startAngle),
-        'A', boardRadius, boardRadius, 0, 0, 1,
-        centerX + boardRadius * Math.sin(endAngle),
-        centerY - boardRadius * Math.cos(endAngle),
-        'Z'
-      ].join(' ');
-
-      sections.push(
-        <g key={number}>
-          <path
-            d={path}
-            onClick={(e) => handleNumberClick(number, e)}
-            className={`
-              transition-all duration-200 cursor-pointer
-              ${isValidated ? 'fill-green-500/30 stroke-green-500 stroke-2' : 
-                isCurrent ? 'fill-[var(--neon-primary)]/20 stroke-[var(--neon-primary)] stroke-2 animate-pulse' :
-                isNext ? 'fill-blue-500/20 stroke-blue-500 stroke-2' :
-                'fill-[var(--glass-bg-lighter)]/50 stroke-[var(--text-primary)]/30 stroke-1'}
-              ${isHit ? 'stroke-green-500 stroke-2' : ''}
-              ${isSubmitting || throwsInTurn.length >= 3 ? 'cursor-not-allowed opacity-50' : ''}
-              hover:brightness-110
-            `}
-          />
-          <text
-            x={getNumberPosition(number).x}
-            y={getNumberPosition(number).y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className={`text-sm font-bold fill-current ${
-              isValidated ? 'text-green-500' :
-              isCurrent ? 'text-[var(--neon-primary)]' :
-              isNext ? 'text-blue-500' :
-              'text-[var(--text-primary)]/70'
-            }`}
-            transform={`rotate(${index * 18}, ${getNumberPosition(number).x}, ${getNumberPosition(number).y})`}
-          >
-            {number}
-          </text>
-        </g>
-      );
-    });
-
-    return sections;
-  };
-
-  // Affichage des impacts
   const renderHits = () => {
     return dartHits.map((hit, index) => (
       <g key={index}>
-        {/* Impact central */}
         <circle
           cx={hit.x}
           cy={hit.y}
           r={4}
-          className={`${hit.isHit ? 'fill-green-500' : 'fill-red-500'} stroke-white stroke-1`}
+          className={`${hit.isHit ? 'fill-[var(--neon-primary)]' : 'fill-red-500'} stroke-white stroke-1`}
         />
-        {/* Halo extérieur */}
         <circle
           cx={hit.x}
           cy={hit.y}
           r={6}
-          className={`fill-none ${hit.isHit ? 'stroke-green-500' : 'stroke-red-500'} stroke-1 opacity-50`}
+          className={`fill-none ${hit.isHit ? 'stroke-[var(--neon-primary)]' : 'stroke-red-500'} stroke-1 opacity-50`}
         />
       </g>
     ));
@@ -200,43 +183,24 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col items-center gap-8">
-      {/* Cible de fléchettes */}
       <div className="relative">
         <svg
-          width={boardRadius * 2}
-          height={boardRadius * 2}
-          viewBox={`0 0 ${boardRadius * 2} ${boardRadius * 2}`}
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
           className={isSubmitting || throwsInTurn.length >= 3 ? 'cursor-not-allowed' : ''}
         >
-          {/* Cercle extérieur */}
           <circle
-            cx={centerX}
-            cy={centerY}
-            r={boardRadius}
+            cx={center}
+            cy={center}
+            r={radius}
             className="fill-[var(--glass-bg)] stroke-[var(--text-primary)] stroke-2"
           />
-          {/* Sections de la cible */}
-          {generateSections()}
-          {/* Double Bull */}
-          <circle
-            cx={centerX}
-            cy={centerY}
-            r={boardRadius * 0.08}
-            className="fill-[var(--glass-bg-lighter)] stroke-[var(--text-primary)] stroke-1"
-          />
-          {/* Bull's eye */}
-          <circle
-            cx={centerX}
-            cy={centerY}
-            r={boardRadius * 0.04}
-            className="fill-red-500"
-          />
-          {/* Impacts de fléchettes */}
+          {dartboardNumbers.map((number, index) => createSection(index, number))}
           {renderHits()}
         </svg>
       </div>
 
-      {/* Affichage des lancers restants */}
       <div className="flex flex-col items-center gap-4">
         <div className="flex gap-2">
           {[...Array(3 - throwsInTurn.length)].map((_, i) => (
