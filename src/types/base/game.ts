@@ -1,7 +1,7 @@
 import { GameType, DartVariant, GameStatus } from '../game';
-import type { PlayerGame } from '../index';
+import type { PlayerGame } from './player';
 import { CricketThrow, PlayerCricketScores } from '../cricket';
-import { AroundTheClockThrow } from '../aroundTheClock';
+import { AroundTheClockThrow } from '../variants/aroundTheClock/types';
 
 export interface Game {
   id: string;
@@ -93,12 +93,21 @@ export interface CricketScoreResponse extends BaseScoreResponse {
   }>;
 }
 
-export interface AroundTheClockScoreResponse extends BaseScoreResponse {
-  players: Array<{
-    id: string;
-    username: string;
-    currentNumber: number;
-    throwHistory: AroundTheClockThrow[];
-    validatedNumbers: number[];
-  }>;
+export interface AroundTheClockScoreResponse {
+  data: {
+    players: Array<{
+      id: string;
+      username: string;
+      currentNumber: number;
+      throwHistory: AroundTheClockThrow[];
+      validatedNumbers: number[];
+      totalThrows: number;
+      validatedCount: number;
+    }>;
+    currentPlayerIndex: number;
+    status: GameStatus;
+    variant: 'AROUND_THE_CLOCK';
+    lastUpdateTimestamp: number;
+    winner?: string;
+  };
 } 

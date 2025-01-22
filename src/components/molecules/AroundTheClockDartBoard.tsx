@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import type { AroundTheClockThrow } from '../../types/aroundTheClock';
+import type { AroundTheClockThrow } from '../../types/variants/aroundTheClock/types';
 
 interface Props {
   currentNumber: number;

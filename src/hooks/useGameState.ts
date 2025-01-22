@@ -62,21 +62,31 @@ export const useGameState = (
         return cricketState;
 
       case DartVariant.AROUND_THE_CLOCK:
-        return {
+        console.log('Initializing Around the Clock game state with session:', initialSession);
+        const aroundTheClockState = {
           variant: 'AROUND_THE_CLOCK',
           status: initialSession.status,
           currentPlayerIndex: activePlayerIndex,
-          players: initialSession.players.map(player => ({
-            id: player.user?.id || player.guestPlayer?.id || '',
-            username: player.user?.username || player.guestPlayer?.name || 'Unknown',
-            currentNumber: 1,
-            throwHistory: [],
-            validatedNumbers: new Set<number>(),
-            totalThrows: 0,
-            validatedCount: 0
-          })),
-          lastUpdateTimestamp: Date.now()
+          players: initialSession.players.map(player => {
+            console.log('Processing player:', player);
+            const aroundTheClockScore = player.aroundTheClockScore;
+            console.log('Around the Clock score:', aroundTheClockScore);
+            
+            return {
+              id: player.user?.id || player.guestPlayer?.id || '',
+              username: player.user?.username || player.guestPlayer?.name || 'Unknown',
+              currentNumber: aroundTheClockScore?.currentNumber || 1,
+              throwHistory: aroundTheClockScore?.throwHistory || [],
+              validatedNumbers: new Set(aroundTheClockScore?.validatedNumbers || []),
+              totalThrows: aroundTheClockScore?.throwHistory?.length || 0,
+              validatedCount: aroundTheClockScore?.validatedNumbers?.length || 0
+            };
+          }),
+          lastUpdateTimestamp: Date.now(),
+          winner: initialSession.winnerId
         } as AroundTheClockGameState;
+        console.log('Created Around the Clock game state:', aroundTheClockState);
+        return aroundTheClockState;
 
       default:
         return {

@@ -39,6 +39,7 @@ export interface AroundTheClockGameState {
   currentPlayerIndex: number;
   players: AroundTheClockPlayerState[];
   lastUpdateTimestamp: number;
+  winner?: string;
 }
 
 export interface AroundTheClockStateUpdate {
@@ -51,7 +52,15 @@ export interface AroundTheClockStateUpdate {
 
 export interface AroundTheClockScoreResponse {
   data: {
-    players: AroundTheClockPlayerState[];
+    players: {
+      id: string;
+      username: string;
+      currentNumber: number;
+      throwHistory: AroundTheClockThrow[];
+      validatedNumbers: number[];
+      totalThrows: number;
+      validatedCount: number;
+    }[];
     currentPlayerIndex: number;
     status: GameStatus;
     variant: 'AROUND_THE_CLOCK';
