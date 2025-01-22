@@ -1,5 +1,4 @@
 import { GameStatus } from '../../game';
-import { BaseScoreData } from '../../base/game';
 
 export interface AroundTheClockThrow {
   number: number;
