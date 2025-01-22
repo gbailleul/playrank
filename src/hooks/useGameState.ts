@@ -72,14 +72,23 @@ export const useGameState = (
             const aroundTheClockScore = player.aroundTheClockScore;
             console.log('Around the Clock score:', aroundTheClockScore);
             
+            // Parse throwHistory and validatedNumbers from JSON strings
+            const throwHistory = aroundTheClockScore?.throwHistory 
+              ? JSON.parse(aroundTheClockScore.throwHistory as string)
+              : [];
+            
+            const validatedNumbers = aroundTheClockScore?.validatedNumbers
+              ? JSON.parse(aroundTheClockScore.validatedNumbers as string)
+              : [];
+            
             return {
               id: player.user?.id || player.guestPlayer?.id || '',
               username: player.user?.username || player.guestPlayer?.name || 'Unknown',
               currentNumber: aroundTheClockScore?.currentNumber || 1,
-              throwHistory: aroundTheClockScore?.throwHistory || [],
-              validatedNumbers: new Set(aroundTheClockScore?.validatedNumbers || []),
-              totalThrows: aroundTheClockScore?.throwHistory?.length || 0,
-              validatedCount: aroundTheClockScore?.validatedNumbers?.length || 0
+              throwHistory,
+              validatedNumbers: validatedNumbers.filter((n: any) => typeof n === 'number'),
+              totalThrows: aroundTheClockScore?.totalThrows || 0,
+              validatedCount: validatedNumbers.filter((n: any) => typeof n === 'number').length
             };
           }),
           lastUpdateTimestamp: Date.now(),

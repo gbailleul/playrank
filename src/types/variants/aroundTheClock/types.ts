@@ -12,8 +12,9 @@ export interface AroundTheClockScore {
   id: string;
   playerGameId: string;
   currentNumber: number;
-  throwHistory: AroundTheClockThrow[];
-  validatedNumbers: number[];
+  throwHistory: string;  // JSON string of AroundTheClockThrow[]
+  validatedNumbers: string;  // JSON string of number[]
+  totalThrows: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,7 +31,7 @@ export interface AroundTheClockPlayerState {
   username: string;
   currentNumber: number;
   throwHistory: AroundTheClockThrow[];
-  validatedNumbers: Set<number>;
+  validatedNumbers: number[];
   totalThrows: number;
   validatedCount: number;
 }
@@ -46,7 +47,7 @@ export interface AroundTheClockGameState {
 
 export interface AroundTheClockStateUpdate {
   throwHistory: AroundTheClockThrow[];
-  validatedNumbers: Set<number>;
+  validatedNumbers: number[];
   currentNumber: number;
   totalThrows: number;
   validatedCount: number;

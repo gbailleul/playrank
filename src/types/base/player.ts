@@ -1,6 +1,7 @@
 import { Score } from './game';
 import { User } from '../user';
 import { AroundTheClockScore } from '../variants/aroundTheClock/types';
+import { CricketScore } from '../variants/cricket/types';
 
 export interface Player {
   id: string;
@@ -20,6 +21,7 @@ export interface PlayerGame {
   currentScore: number;
   joinedAt: Date;
   aroundTheClockScore?: AroundTheClockScore;
+  cricketScores?: CricketScore;
 }
 
 export interface ExtendedPlayer {
