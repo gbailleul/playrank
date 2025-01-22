@@ -122,8 +122,9 @@ const AroundTheClockDartBoard: React.FC<Props> = ({
       nextValidNumber = lastValidated + 1;
     }
 
+    // Un numéro est validé s'il est dans validatedNumbers OU s'il est inférieur au numéro actuel
+    const isValidated = validatedNumbers.includes(score) || score < currentNumber || validatedInTurn.includes(score);
     const isCurrent = score === nextValidNumber;
-    const isValidated = validatedNumbers.includes(score) || validatedInTurn.includes(score);
     const isHit = dartHits.some(hit => hit.number === score && hit.isHit);
 
     const path = `M ${center} ${center}
