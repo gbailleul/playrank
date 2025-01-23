@@ -1,13 +1,40 @@
-import type { Game, CreateGameDto, AddScoreData } from '../types/index';
+import type { Game, CreateGameDto, AddScoreData, GameSession } from '../types/index';
 import type { CricketGameStats } from '../types/variants/cricket/types';
 import type { AddAroundTheClockScoreData, AroundTheClockScoreResponse } from '../types/variants/aroundTheClock/types';
 import { dashboardService } from './dashboard';
 import client from './client';
 import { AddCricketScoreData, ClassicScoreResponse, CricketScoreResponse } from '../types/base/game';
 
+interface GamePlayer {
+  id?: string;
+  name?: string;
+}
+
+interface CreateGameResponse {
+  game: {
+    id: string;
+    name: string;
+    description: string;
+    gameType: string;
+    maxScore: number;
+    minPlayers: number;
+    maxPlayers: number;
+    variant: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  session: {
+    id: string;
+    gameId: string;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}
+
 export const gameService = {
-  createGame: (data: CreateGameDto) => {
-    return client.post<Game>('/api/games', data);
+  createGame: (data: CreateGameDto & { players: GamePlayer[] }) => {
+    return client.post<CreateGameResponse>('/api/games', data);
   },
 
   getAllGames: () => {
@@ -19,10 +46,10 @@ export const gameService = {
   },
 
   getSession: (gameId: string, sessionId: string) => {
-    return client.get<Game>(`/api/games/${gameId}/sessions/${sessionId}`);
+    return client.get<GameSession>(`/api/games/${gameId}/sessions/${sessionId}`);
   },
 
-  createGameSession: (gameId: string, data: { players: string[] }) => {
+  createGameSession: (gameId: string, data: { players: GamePlayer[] }) => {
     return client.post<Game>(`/api/games/${gameId}/sessions`, data);
   },
 

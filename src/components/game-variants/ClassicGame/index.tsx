@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GameSession } from '../../../types/base/game';
 import { ClassicGameState } from '../../../types/variants/classic/types';
 import DartBoard from '../../molecules/DartBoard';
@@ -16,7 +16,9 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
   gameState,
   activePlayerIndex,
   onScoreSubmit,
-}) => {  
+}) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Vérifier que session.players existe et que l'index est valide
   if (!session.players || activePlayerIndex >= session.players.length) {
     return null;
@@ -37,33 +39,20 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
     return null;
   }
 
-  const handleScoreSubmit = async (points: number) => {
-    if (!session || activePlayerIndex === undefined) {
-      return;
+  const handleScoreSubmit = async (points: number, isDouble: boolean = false) => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      await onScoreSubmit(points, isDouble);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const sessionPlayer = session.players[activePlayerIndex];
-    if (!sessionPlayer) {
-      return;
-    }
-
-    const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
-    if (!playerId) {
-      return;
-    }
-
-    const player = gameState.players.find(p => p.id === playerId);
-    if (!player) {
-      return;
-    }
-
-    await onScoreSubmit(points, false);
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <ScorePanel
-        session={session}
         gameState={gameState}
         activePlayerIndex={activePlayerIndex}
       />

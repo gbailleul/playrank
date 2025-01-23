@@ -1,54 +1,92 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GameSession } from '../types/base/game';
+import { GameStatus } from '../types/game';
 import { gameService } from '../api/services';
-import { CricketGameStats } from '../types/variants/cricket/types';
 
+interface UseGameSession {
+  session: GameSession | null;
+  loading: boolean;
+  error: string | null;
+  activePlayerIndex: number;
+  setActivePlayerIndex: (index: number) => void;
+  fetchSession: () => Promise<void>;
+  moveToNextPlayer: () => void;
+  endGame: (winnerId: string) => Promise<void>;
+}
 
-export const useGameSession = (gameId: string | undefined) => {
+export const useGameSession = (gameId: string | undefined): UseGameSession => {
   const [session, setSession] = useState<GameSession | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-  const [activePlayerIndex, setActivePlayerIndex] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
 
   const fetchSession = useCallback(async () => {
     if (!gameId) {
+      setError('No game ID provided');
       return;
     }
 
     setLoading(true);
     try {
+      // First get the game to find the latest session
       const gameResponse = await gameService.getGame(gameId);
       const game = gameResponse.data;
+      
       if (!game.sessions || game.sessions.length === 0) {
-        setError('Aucune session trouvée');
+        setError('No session found');
         return;
       }
+      
+      // Get the latest session
       const latestSession = game.sessions[game.sessions.length - 1];
-      const sessionResponse = await gameService.getSession(gameId, latestSession.id);
-      setSession(sessionResponse.data as unknown as GameSession);
+      const { data: sessionData } = await gameService.getSession(gameId, latestSession.id);
+      
+      // Ensure the session data has all required fields
+      const validatedSession: GameSession = {
+        ...sessionData,
+        status: sessionData.status || GameStatus.IN_PROGRESS,
+        players: sessionData.players || [],
+        createdAt: new Date(sessionData.createdAt),
+        updatedAt: new Date(sessionData.updatedAt)
+      };
+      
+      setSession(validatedSession);
+      
+      // Get the current player index from the session data or use the active player index
+      const currentIndex = (sessionData as any).currentPlayerIndex;
+      if (typeof currentIndex === 'number') {
+        setActivePlayerIndex(currentIndex);
+      }
     } catch (error) {
-      setError('Erreur lors du chargement de la session');
+      console.error('Error loading session:', error);
+      setError(error instanceof Error ? error.message : 'Error loading session');
     } finally {
       setLoading(false);
     }
   }, [gameId]);
 
   const moveToNextPlayer = useCallback(() => {
-    if (!session?.players) return;
-    setActivePlayerIndex((current) => (current + 1) % session.players.length);
-  }, [session]);
+    if (!session) return;
+    const nextIndex = (activePlayerIndex + 1) % session.players.length;
+    setActivePlayerIndex(nextIndex);
+  }, [session, activePlayerIndex]);
 
-  const endGame = useCallback(async (winnerId: string, gameStats?: CricketGameStats) => {
-    if (!gameId || !session?.id) return;
-    
+  const endGame = useCallback(async (winnerId: string) => {
+    if (!session || !gameId) return;
     try {
-      await gameService.endSession(gameId, session.id, winnerId, gameStats);
+      await gameService.endSession(gameId, session.id, winnerId);
       await fetchSession();
-    } catch (err) {
-      console.error('Error ending game:', err);
-      setError('Error ending game');
+    } catch (error) {
+      console.error('Error ending game:', error);
+      setError(error instanceof Error ? error.message : 'Error ending game');
     }
   }, [gameId, session, fetchSession]);
+
+  useEffect(() => {
+    if (gameId) {
+      fetchSession();
+    }
+  }, [fetchSession, gameId]);
 
   return {
     session,

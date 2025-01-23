@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GameSession } from '../types/base/game';
-import { DartVariant } from '../types/game';
+import { DartVariant, GameStatus } from '../types/game';
 import { CricketGameState, CricketScoreTarget } from '../types/variants/cricket/types';
 import { AroundTheClockGameState } from '../types/variants/aroundTheClock/types';
 import { ClassicGameState } from '../types/variants/classic/types';
@@ -13,9 +13,17 @@ export const useGameState = (
   activePlayerIndex: number
 ) => {
   const [gameState, setGameState] = useState<GameStateType | null>(null);
+  const lastSessionId = useRef<string | null>(null);
 
   const initializeGameState = useCallback(() => {
     if (!initialSession || !initialSession.game) return null;
+
+    if (lastSessionId.current === initialSession.id && gameState) {
+      console.log('Same session, keeping current state');
+      return gameState;
+    }
+
+    lastSessionId.current = initialSession.id;
 
     switch (variant) {
       case DartVariant.CRICKET:
@@ -83,47 +91,41 @@ export const useGameState = (
         return aroundTheClockState;
 
       default:
-        return {
+        const classicState = {
           players: initialSession.players.map(player => ({
             id: player.user?.id || player.guestPlayer?.id || '',
             username: player.user?.username || player.guestPlayer?.name || 'Unknown',
-            scores: player.scores || [],
+            scores: [...(player.scores || [])].sort((a, b) => b.turnNumber - a.turnNumber),
             currentScore: player.currentScore
           })),
           currentPlayerIndex: activePlayerIndex,
           gameStatus: initialSession.status
         } as ClassicGameState;
+        console.log('Initialized classic game state:', classicState);
+        return classicState;
     }
-  }, [initialSession, variant, activePlayerIndex]);
+  }, [initialSession, variant, activePlayerIndex, gameState]);
 
   useEffect(() => {
-    if (initialSession) {
-      const newState = initializeGameState();
-      if (newState) {
-        setGameState(prevState => ({
-          ...newState,
-          currentPlayerIndex: prevState?.currentPlayerIndex ?? newState.currentPlayerIndex
-        }));
+    if (initialSession?.id && (!gameState || lastSessionId.current !== initialSession.id)) {
+      console.log('Initializing game state from session');
+      const state = initializeGameState();
+      if (state) {
+        console.log('Setting initial game state:', state);
+        setGameState(state);
       }
     }
-  }, [initialSession, initializeGameState]);
-
-  useEffect(() => {
-    if (gameState) {
-      setGameState(prevState => {
-        if (!prevState) return null;
-        return {
-          ...prevState,
-          currentPlayerIndex: activePlayerIndex
-        } as GameStateType;
-      });
-    }
-  }, [activePlayerIndex]);
+  }, [initialSession, initializeGameState, gameState]);
 
   const updateGameState = useCallback((
     updater: (prevState: GameStateType) => GameStateType
   ) => {
-    setGameState(prev => prev ? updater(prev) : null);
+    setGameState(prev => {
+      if (!prev) return null;
+      const updated = updater(prev);
+      console.log('Updating game state:', updated);
+      return updated;
+    });
   }, []);
 
   return {

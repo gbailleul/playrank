@@ -101,25 +101,22 @@ const GameSetup: React.FC = () => {
     try {
       const response = await gameService.createGame({
         name: session.game.name,
-        description: session.game.description || `Game of ${session.game.variant}`,
+        description: session.game.description,
         gameType: GameType.DARTS,
-        maxScore: 20, // For Around the Clock
-        minPlayers: 2,
-        maxPlayers: 4,
-        variant: session.game.variant
+        maxScore: session.game.maxScore,
+        minPlayers: session.game.minPlayers,
+        maxPlayers: session.game.maxPlayers,
+        variant: session.game.variant,
+        players: selectedPlayers.map(p => ({ id: p.id }))
       });
-      
-      if (response.data) {
-        // Create game session with selected players
-        const sessionResponse = await gameService.createGameSession(
-          response.data.id,
-          { players: selectedPlayers.map(p => p.id) }
-        );
-        
-        if (sessionResponse.data) {
-          navigate(`/games/${response.data.id}`);
-        }
-      }
+
+      // Create session with selected players
+      await gameService.createGameSession(
+        response.data.game.id,
+        { players: selectedPlayers.map(p => ({ id: p.id })) }
+      );
+
+      navigate(`/games/${response.data.game.id}`);
     } catch (error) {
       console.error('Error creating game:', error);
     }

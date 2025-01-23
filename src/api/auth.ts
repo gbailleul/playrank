@@ -6,6 +6,10 @@ export const auth = {
     return client.get<User[]>('/api/users/players');
   },
 
+  getAllUsers: () => {
+    return client.get<User[]>('/api/users/players');
+  },
+
   getProfile: () => {
     return client.get<User>('/api/auth/profile');
   },

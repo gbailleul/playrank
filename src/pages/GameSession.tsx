@@ -29,6 +29,7 @@ import { gameService } from '../api/services';
 import type { CricketThrow, CricketGameState } from '../types/variants/cricket/types';
 import type { AroundTheClockThrow, AroundTheClockGameState, AroundTheClockPlayerState } from '../types/variants/aroundTheClock/types';
 import type { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
+import { Score, GameScoreResponse } from '../types/base/score';
 
 
 const GameSession: React.FC = () => {
@@ -38,6 +39,7 @@ const GameSession: React.FC = () => {
   const [infoMessage, setInfoMessage] = useState<string>('');
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [winner, setWinner] = useState<{ username: string; id: string; } | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Hooks personnalisés pour la gestion de l'état
   const {
@@ -59,47 +61,18 @@ const GameSession: React.FC = () => {
     initializeGameState
   } = useGameState(session, gameVariant, activePlayerIndex);
 
-  // Hook WebSocket
-  const socket = useGameWebSocket(session?.game || null, user);
-
-  // Gestion des événements WebSocket
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleGameUpdate = (event: GameUpdateEvent) => {
-      if (event.type === 'score_update' && event.cricketScore) {
-        fetchSession();
-      }
-    };
-
-    socket.on('game_update', handleGameUpdate);
-
-    return () => {
-      socket.off('game_update', handleGameUpdate);
-    };
-  }, [socket, fetchSession]);
-
-  // Initialisation
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
-
-  useEffect(() => {
-    if (session) {
-      const state = initializeGameState();
-      if (state) {
-        setGameState(state);
-      }
-    }
-  }, [session, initializeGameState, setGameState]);
+  // Hook WebSocket avec une référence stable au jeu
+  const gameRef = React.useMemo(() => session?.game || null, [session?.game]);
+  const { subscribe, emit, isConnected } = useGameWebSocket(gameRef, user);
 
   // Gestionnaires d'événements
   const handleClassicScore = async (points: number) => {
-    if (!session || !gameState) {
+    if (!session || !gameState || isSubmitting) {
       return;
     }
 
     try {
+      setIsSubmitting(true);
       const sessionPlayer = session.players[activePlayerIndex];
       const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
 
@@ -107,52 +80,52 @@ const GameSession: React.FC = () => {
         return;
       }
 
-      // Calculate the correct turn number based on existing scores
-      const playerState = gameState.players.find(p => p.id === playerId) as ClassicPlayerState;
-      const turnNumber = playerState?.scores 
-        ? Math.max(...playerState.scores.map((s: { turnNumber: number }) => s.turnNumber), 0) + 1 
-        : 1;
+      const player = gameState.players.find(p => p.id === playerId);
+      const turnNumber = gameVariant === DartVariant.FIVE_HUNDRED_ONE || gameVariant === DartVariant.THREE_HUNDRED_ONE
+        ? (player as ClassicPlayerState)?.scores?.length || 0
+        : 0;
 
+      // Envoyer le score au serveur
       const response = await gameService.addScore(session.game.id, session.id, {
         playerId,
         points,
-        turnNumber,
+        turnNumber: turnNumber + 1,
         activePlayerIndex
       });
 
+      // Mettre à jour l'état immédiatement avec la réponse
       if (response.data) {
         const { players, currentPlayerIndex, gameStatus, winner } = response.data;
         
-        // Update the game state with the new data, maintaining original player order
         const updatedGameState: ClassicGameState = {
-          players: session.players.map(sessionPlayer => {
-            const player = players.find(p => 
-              (sessionPlayer.user?.id === p.id) || (sessionPlayer.guestPlayer?.id === p.id)
-            );
-            return {
-              id: sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id || '',
-              username: sessionPlayer.user?.username || sessionPlayer.guestPlayer?.name || 'Unknown',
-              scores: player?.scores || [],
-              currentScore: player?.currentScore || session.game.maxScore
-            };
-          }),
-          currentPlayerIndex,
-          gameStatus,
-          winner
+          players: players.map(player => ({
+            id: player.id,
+            username: player.username,
+            scores: player.scores.map(score => ({
+              id: score.id,
+              points: score.points,
+              turnNumber: score.turnNumber,
+              createdAt: new Date(score.createdAt),
+              isDouble: score.isDouble || false
+            })).sort((a, b) => b.turnNumber - a.turnNumber),
+            currentScore: player.currentScore
+          })),
+          currentPlayerIndex: currentPlayerIndex || 0,
+          gameStatus: gameStatus || 'IN_PROGRESS',
+          winner: winner
         };
-        
+
+        console.log('Updating game state from response:', updatedGameState);
         setGameState(updatedGameState);
-        setActivePlayerIndex(currentPlayerIndex);
-
-        // Fetch the latest session data
-        await fetchSession();
-
-        if (gameStatus === GameStatus.COMPLETED && winner) {
-          handleEndGame(winner);
-        }
+        setActivePlayerIndex(currentPlayerIndex || 0);
       }
+      
     } catch (error) {
       console.error('Error submitting score:', error);
+      setInfoMessage('Erreur lors de l\'envoi du score');
+      setTimeout(() => setInfoMessage(''), 3000);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -263,23 +236,96 @@ const GameSession: React.FC = () => {
     }
   };
 
-  const handleEndGame = async (winnerId: string) => {
-    // Trouver le joueur gagnant dans la session
-    const winningPlayer = session?.players.find(
-      player => (player.user?.id === winnerId) || (player.guestPlayer?.id === winnerId)
-    );
-
-    if (winningPlayer) {
-      const username = winningPlayer.user?.username || winningPlayer.guestPlayer?.name || 'Unknown';
-      setWinner({ username, id: winningPlayer.user?.id || winningPlayer.guestPlayer?.id || '' });
-      setShowVictoryModal(true);
-    }
-
-    // Mettre à jour le statut de la session
-    if (session?.id) {
+  const handleEndGame = async (winnerId?: string) => {
+    if (!session || !winnerId) return;
+    try {
       await endGame(winnerId);
+      setShowVictoryModal(true);
+      const winner = session.players.find(p => 
+        (p.user?.id === winnerId) || (p.guestPlayer?.id === winnerId)
+      );
+      if (winner) {
+        setWinner({
+          id: winnerId,
+          username: winner.user?.username || winner.guestPlayer?.name || 'Unknown'
+        });
+      }
+    } catch (error) {
+      console.error('Error ending game:', error);
     }
   };
+
+  // Initialisation de la session
+  useEffect(() => {
+    console.log('Fetching initial session data');
+    fetchSession();
+  }, [fetchSession]);
+
+  // Initialiser l'état du jeu uniquement au chargement initial
+  useEffect(() => {
+    if (session?.id) {
+      console.log('Initializing game state from session');
+      const state = initializeGameState();
+      if (state) {
+        setGameState(state);
+      }
+    }
+  }, [session?.id, initializeGameState]);
+
+  // Gestion des événements WebSocket
+  useEffect(() => {
+    if (!isConnected || !session) {
+      console.log('Not connected or no session, skipping WebSocket setup');
+      return;
+    }
+
+    console.log('Setting up WebSocket event handlers');
+    const unsubscribe = subscribe('game_update', (event: GameUpdateEvent) => {
+      console.log('WebSocket event received:', event);
+      
+      if (event.type === 'score_update' && event.score) {
+        const { players, currentPlayerIndex, gameStatus, winner } = event.score;
+        
+        if (!Array.isArray(players)) {
+          console.error('Invalid players data received:', event.score);
+          return;
+        }
+
+        // Forcer la mise à jour de l'état avec les nouvelles données
+        const updatedGameState: ClassicGameState = {
+          players: players.map(player => ({
+            id: player.id,
+            username: player.username,
+            scores: player.scores.map(score => ({
+              id: score.id,
+              points: score.points,
+              turnNumber: score.turnNumber,
+              createdAt: new Date(score.createdAt),
+              isDouble: score.isDouble || false
+            })).sort((a, b) => b.turnNumber - a.turnNumber),
+            currentScore: player.currentScore
+          })),
+          currentPlayerIndex: currentPlayerIndex || 0,
+          gameStatus: gameStatus || 'IN_PROGRESS',
+          winner: winner
+        };
+
+        // Mise à jour forcée sans vérification
+        console.log('Forcing game state update from WebSocket:', updatedGameState);
+        setGameState(updatedGameState);
+        setActivePlayerIndex(currentPlayerIndex || 0);
+
+        if (gameStatus === GameStatus.COMPLETED && winner && typeof winner === 'string') {
+          handleEndGame(winner);
+        }
+      }
+    });
+
+    return () => {
+      console.log('Cleaning up WebSocket event handlers');
+      unsubscribe();
+    };
+  }, [isConnected, subscribe, session]);
 
   if (loading) {
     return (

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth } from '../api/auth';
 import type { User } from '../types/index';
+import axios from 'axios';
 
 interface AuthContextType {
   user: User | null;
@@ -41,6 +42,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const handleAuthError = (err: any) => {
+    console.error('Auth error:', err);
+    
+    // Si l'erreur est une erreur d'authentification ou l'utilisateur n'existe pas
+    if (axios.isAxiosError(err) && (
+      err.response?.status === 401 || 
+      err.response?.data?.code === 'USER_NOT_FOUND' ||
+      err.response?.data?.code === 'TOKEN_EXPIRED'
+    )) {
+      localStorage.removeItem('token');
+      setUser(null);
+    }
+    
+    setError(err.response?.data?.message || 'Une erreur est survenue');
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
@@ -55,9 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data } = await auth.getProfile();
         setUser(data);
       } catch (err) {
-        console.error('Error initializing auth:', err);
-        localStorage.removeItem('token');
-        setUser(null);
+        handleAuthError(err);
       } finally {
         setLoading(false);
       }
@@ -76,9 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(data.user);
       setError(null);
     } catch (err: any) {
-      console.error('Login error:', err);
-      localStorage.removeItem('token');
-      setUser(null);
+      handleAuthError(err);
       throw err;
     }
   };
@@ -93,9 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(data.user);
       setError(null);
     } catch (err: any) {
-      console.error('Registration error:', err);
-      localStorage.removeItem('token');
-      setUser(null);
+      handleAuthError(err);
       throw err;
     }
   };
@@ -116,9 +127,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data } = await auth.updateAvatar(avatarData);
       setUser(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : null);
-    } catch (error) {
-      console.error('Error updating avatar:', error);
-      throw error;
+    } catch (err) {
+      handleAuthError(err);
+      throw err;
     }
   };
 

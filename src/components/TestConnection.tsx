@@ -35,17 +35,18 @@ const TestConnection = () => {
       const { data } = await gameService.createGame({
         name: 'Test Game',
         gameType: GameType.DARTS,
-        description: 'A test game',
+        description: 'Test game for connection check',
         maxScore: 501,
         minPlayers: 2,
         maxPlayers: 4,
-        variant: DartVariant.FIVE_HUNDRED_ONE
+        variant: DartVariant.FIVE_HUNDRED_ONE,
+        players: [] // Add empty players array for test
       });
       setTestResults(prev => ({
         ...prev,
         createGame: {
           status: 'success',
-          message: `Game created with ID: ${data.id}`,
+          message: `Game created with ID: ${data.game.id}`,
         },
       }));
     } catch (error) {
