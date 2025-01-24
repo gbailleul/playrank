@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { GameSession } from '../types/base/game';
 import { GameStatus } from '../types/game';
 import { gameService } from '../api/services';
+import type { GameSession } from '../types/base/game';
+import type { PlayerGame } from '../types/base/player';
 
 interface UseGameSession {
   session: GameSession | null;
@@ -41,13 +42,33 @@ export const useGameSession = (gameId: string | undefined): UseGameSession => {
       const latestSession = game.sessions[game.sessions.length - 1];
       const { data: sessionData } = await gameService.getSession(gameId, latestSession.id);
       
-      // Ensure the session data has all required fields
+      // Ensure the session data has all required fields and convert types
+      const validatedPlayers: PlayerGame[] = sessionData.players.map((player: any) => ({
+        ...player,
+        scores: player.scores || [],
+        cricketScores: player.cricketScores ? {
+          id: player.cricketScores.id,
+          scores: player.cricketScores.scores,
+          createdAt: new Date(player.cricketScores.createdAt)
+        } : undefined,
+        joinedAt: new Date(player.joinedAt),
+        currentScore: player.currentScore || 0
+      }));
+
       const validatedSession: GameSession = {
         ...sessionData,
         status: sessionData.status || GameStatus.IN_PROGRESS,
-        players: sessionData.players || [],
+        players: validatedPlayers,
         createdAt: new Date(sessionData.createdAt),
-        updatedAt: new Date(sessionData.updatedAt)
+        updatedAt: new Date(sessionData.updatedAt),
+        game: {
+          ...sessionData.game,
+          sessions: sessionData.game.sessions?.map((s: any) => ({
+            ...s,
+            createdAt: new Date(s.createdAt),
+            updatedAt: new Date(s.updatedAt)
+          }))
+        }
       };
       
       setSession(validatedSession);

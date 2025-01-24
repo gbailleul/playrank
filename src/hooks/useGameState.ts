@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { GameSession } from '../types/base/game';
-import { DartVariant, GameStatus } from '../types/game';
-import { CricketGameState, CricketScoreTarget } from '../types/variants/cricket/types';
-import { AroundTheClockGameState } from '../types/variants/aroundTheClock/types';
-import { ClassicGameState } from '../types/variants/classic/types';
+import type { GameSession } from '../types/base/game';
+import { DartVariant } from '../types/game';
+import type { CricketGameState } from '../types/variants/cricket/types';
+import type { ClassicGameState } from '../types/variants/classic/types';
+import type { AroundTheClockGameState } from '../types/variants/aroundTheClock/types';
+import { CricketScoreTarget } from '../types/variants/cricket/types';
 
 type GameStateType = CricketGameState | AroundTheClockGameState | ClassicGameState;
 

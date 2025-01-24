@@ -1,9 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { gameService } from '../api/services';
-import type { GameSession, User, PlayerGame } from '../types/index';
+import type { User } from '../types/index';
+import type { Game, GameSession } from '../types/base/game';
+import type { PlayerGame } from '../types/base/player';
 import { UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { GameStatus, GameType } from '../types/game';
+import { GameStatus, GameType, DartVariant } from '../types/game';
+
+interface GameData {
+  id: string;
+  name: string;
+  description: string;
+  gameType: GameType;
+  maxScore: number;
+  minPlayers: number;
+  maxPlayers: number;
+  creatorId: string;
+  variant: DartVariant;
+  createdAt: string;
+  updatedAt: string;
+  sessions?: Array<{
+    id: string;
+    players: PlayerGame[];
+  }>;
+}
 
 const GameSetup: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,24 +40,46 @@ const GameSetup: React.FC = () => {
       try {
         if (!id) return;
         const { data } = await gameService.getSession(id, 'default-session');
+        const gameData = data as unknown as GameData;
+        
+        // Créer un objet Game à partir des données
+        const game: Game = {
+          id: gameData.id,
+          name: gameData.name,
+          description: gameData.description,
+          gameType: gameData.gameType,
+          maxScore: gameData.maxScore,
+          minPlayers: gameData.minPlayers,
+          maxPlayers: gameData.maxPlayers,
+          creatorId: gameData.creatorId,
+          variant: gameData.variant,
+          createdAt: new Date(gameData.createdAt),
+          updatedAt: new Date(gameData.updatedAt)
+        };
+
+        // Créer la session avec le jeu
         const gameSession: GameSession = {
-          id: data.id,
-          gameId: data.id,
-          game: data,
-          players: data.sessions?.[0]?.players || [],
+          id: gameData.id,
+          gameId: gameData.id,
+          game,
+          players: gameData.sessions?.[0]?.players || [],
           status: GameStatus.IN_PROGRESS,
           createdAt: new Date(),
           updatedAt: new Date()
         };
+
         setSession(gameSession);
-        setSelectedPlayers(gameSession.players.map((p: PlayerGame) => ({
+        
+        // Convertir les joueurs en utilisateurs
+        const players = gameData.sessions?.[0]?.players || [];
+        setSelectedPlayers(players.map((p: PlayerGame) => ({
           id: p.playerId,
           username: p.playerId,
           email: '',
           firstName: '',
           lastName: '',
-          role: 'PLAYER',
-          status: 'ACTIVE',
+          role: 'PLAYER' as const,
+          status: 'ACTIVE' as const,
           createdAt: new Date(),
           updatedAt: new Date()
         })));

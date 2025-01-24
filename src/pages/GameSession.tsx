@@ -26,13 +26,12 @@ import { useGameSession } from '../hooks/useGameSession';
 import { useGameState } from '../hooks/useGameState';
 import { useGameWebSocket, GameUpdateEvent } from '../hooks/useGameWebSocket';
 import { gameService } from '../api/services';
-import type { CricketThrow, CricketGameState, CricketPlayerState, CricketScoreTarget } from '../types/variants/cricket/types';
+import type { CricketThrow, CricketGameState, CricketPlayerState, CricketScoreTarget, CricketPlayerResponse } from '../types/variants/cricket/types';
 import { DEFAULT_CRICKET_SCORES } from '../types/variants/cricket/types';
 import type { AroundTheClockThrow, AroundTheClockGameState, AroundTheClockPlayerState } from '../types/variants/aroundTheClock/types';
 import type { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
-import { Score, GameScoreResponse } from '../types/base/score';
 import type { CricketScoreResponse } from '../types/base/game';
-import type { PlayerCricketScores } from '../types/cricket';
+import type { PlayerGame } from '../types/base/player';
 
 
 const GameSession: React.FC = () => {
@@ -66,7 +65,7 @@ const GameSession: React.FC = () => {
 
   // Hook WebSocket avec une référence stable au jeu
   const gameRef = React.useMemo(() => session?.game || null, [session?.game]);
-  const { subscribe, emit, isConnected } = useGameWebSocket(gameRef, user);
+  const { subscribe, isConnected } = useGameWebSocket(gameRef, user);
 
   // Gestionnaires d'événements
   const handleClassicScore = async (points: number) => {
@@ -146,7 +145,7 @@ const GameSession: React.FC = () => {
         return;
       }
 
-      console.log('Current session players:', session.players.map(p => ({
+      console.log('Current session players:', session.players.map((p: PlayerGame) => ({
         id: p.user?.id || p.guestPlayer?.id,
         name: p.user?.username || p.guestPlayer?.name
       })));
@@ -171,29 +170,68 @@ const GameSession: React.FC = () => {
 
       // Mise à jour immédiate avec la réponse du serveur
       if (response.data) {
-        console.log('Raw response data:', response.data);
-        console.log('Players data:', response.data.players);
-        const { players, currentPlayerIndex, gameStatus, winner } = response.data;
+        const { players, currentPlayerIndex, gameStatus, winner } = response.data as CricketScoreResponse;
         
-        // Utiliser directement les joueurs de la réponse du serveur
-        const cricketState: CricketGameState = {
-          players: players.map(player => ({
+        // Récupérer l'ordre des joueurs de la session
+        const sessionPlayerIds = session.players
+          .map((p: PlayerGame) => p.user?.id || p.guestPlayer?.id)
+          .filter((id): id is string => id !== undefined);
+        
+        // Convertir d'abord les données du serveur en format compatible
+        const cricketPlayers = players.map(player => ({
+          id: player.id,
+          username: player.username,
+          scores: player.scores,
+          totalPoints: 'currentScore' in player ? player.currentScore : 0
+        })) as unknown as CricketPlayerResponse[];
+        
+        // Mapper les joueurs avec leurs scores
+        const mappedPlayers = cricketPlayers.map(player => {
+          const scores: Record<string, CricketScoreTarget> = { ...DEFAULT_CRICKET_SCORES };
+          
+          if (Array.isArray(player.scores)) {
+            // Si les scores sont un tableau (Score[]), les convertir en format Cricket
+            player.scores.forEach(score => {
+              const target = score.points.toString();
+              if (scores[target]) {
+                scores[target] = {
+                  hits: score.isDouble ? 2 : 1,
+                  points: score.points
+                };
+              }
+            });
+          } else {
+            // Si les scores sont déjà au format Cricket, les utiliser directement
+            Object.entries(player.scores).forEach(([target, score]) => {
+              if (scores[target]) {
+                scores[target] = score;
+              }
+            });
+          }
+          
+          return {
             id: player.id,
             username: player.username,
-            scores: player.scores || DEFAULT_CRICKET_SCORES,
-            totalPoints: player.totalPoints
-          })),
-          currentPlayerIndex,
-          gameStatus: gameStatus || 'IN_PROGRESS',
-          winner
-        };
-
-        console.log('Final cricket state:', cricketState);
-        setGameState(cricketState);
+            scores,
+            totalPoints: player.totalPoints || Object.values(scores)
+              .reduce((sum, score) => sum + score.points, 0)
+          };
+        });
         
-        // Utiliser l'index du joueur renvoyé par le serveur
-        console.log('Server returned currentPlayerIndex:', currentPlayerIndex);
-        setActivePlayerIndex(currentPlayerIndex);
+        // Réorganiser les joueurs selon l'ordre de la session
+        const reorderedPlayers = sessionPlayerIds
+          .map((id: string) => mappedPlayers.find(p => p.id === id))
+          .filter((player): player is CricketPlayerState => player !== undefined);
+        
+        const cricketState: CricketGameState = {
+          players: reorderedPlayers,
+          currentPlayerIndex: currentPlayerIndex || 0,
+          gameStatus: gameStatus || 'IN_PROGRESS',
+          winner: winner
+        };
+        
+        setGameState(cricketState);
+        setActivePlayerIndex(currentPlayerIndex || 0);
 
         if (gameStatus === 'COMPLETED' && winner) {
           handleEndGame(winner);
@@ -271,7 +309,7 @@ const GameSession: React.FC = () => {
     try {
       await endGame(winnerId);
       setShowVictoryModal(true);
-      const winner = session.players.find(p => 
+      const winner = session.players.find((p: PlayerGame) => 
         (p.user?.id === winnerId) || (p.guestPlayer?.id === winnerId)
       );
       if (winner) {
@@ -334,28 +372,54 @@ const GameSession: React.FC = () => {
           console.log('WebSocket players data:', event.score.players);
           
           // Récupérer l'ordre des joueurs de la session
-          const sessionPlayerIds = session.players.map(p => p.user?.id || p.guestPlayer?.id);
-          console.log('Session player order:', sessionPlayerIds);
+          const sessionPlayerIds = session.players
+            .map((p: PlayerGame) => p.user?.id || p.guestPlayer?.id)
+            .filter((id): id is string => id !== undefined);
           
-          // Mapper d'abord les joueurs avec leurs scores
-          const mappedPlayers = players.map(player => {
-            console.log('Processing WebSocket player:', player);
-            console.log('WebSocket player scores:', player.scores);
-            const playerScores = player.scores || DEFAULT_CRICKET_SCORES;
+          // Convertir d'abord les données du serveur en format compatible
+          const cricketPlayers = players.map(player => ({
+            id: player.id,
+            username: player.username,
+            scores: player.scores,
+            totalPoints: 'currentScore' in player ? player.currentScore : 0
+          })) as unknown as CricketPlayerResponse[];
+          
+          // Mapper les joueurs avec leurs scores
+          const mappedPlayers = cricketPlayers.map(player => {
+            const scores: Record<string, CricketScoreTarget> = { ...DEFAULT_CRICKET_SCORES };
+            
+            if (Array.isArray(player.scores)) {
+              // Si les scores sont un tableau (Score[]), les convertir en format Cricket
+              player.scores.forEach(score => {
+                const target = score.points.toString();
+                if (scores[target]) {
+                  scores[target] = {
+                    hits: score.isDouble ? 2 : 1,
+                    points: score.points
+                  };
+                }
+              });
+            } else {
+              // Si les scores sont déjà au format Cricket, les utiliser directement
+              Object.entries(player.scores).forEach(([target, score]) => {
+                if (scores[target]) {
+                  scores[target] = score;
+                }
+              });
+            }
+            
             return {
               id: player.id,
               username: player.username,
-              scores: playerScores as PlayerCricketScores,
-              totalPoints: Object.values(playerScores)
-                .reduce((sum, score) => sum + (score.points || 0), 0)
+              scores,
+              totalPoints: player.totalPoints || Object.values(scores)
+                .reduce((sum, score) => sum + score.points, 0)
             };
           });
-
-          console.log('Mapped WebSocket players:', mappedPlayers);
           
           // Réorganiser les joueurs selon l'ordre de la session
           const reorderedPlayers = sessionPlayerIds
-            .map(id => mappedPlayers.find(p => p.id === id))
+            .map((id: string) => mappedPlayers.find(p => p.id === id))
             .filter((player): player is CricketPlayerState => player !== undefined);
           
           console.log('Final reordered WebSocket players:', reorderedPlayers);

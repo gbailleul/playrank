@@ -1,4 +1,5 @@
 import { GameStatus } from '../../game';
+import { Score } from '../../base/score';
 
 export type CricketTarget = 15 | 16 | 17 | 18 | 19 | 20 | 25;
 
@@ -59,6 +60,13 @@ export interface CricketScoreResponse {
   cricketScore: {
     scores: Record<string, CricketScoreTarget>;
   };
+}
+
+export interface CricketPlayerResponse {
+  id: string;
+  username: string;
+  scores: Score[] | Record<string, CricketScoreTarget>;
+  totalPoints: number;
 }
 
 export const DEFAULT_CRICKET_SCORES: Record<string, CricketScoreTarget> = {

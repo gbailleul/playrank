@@ -22,7 +22,7 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ playerGames }) => {
 
     const data = sortedGames.map((game, index) => {
       const gamesUpToNow = sortedGames.slice(0, index + 1);
-      const gamesWon = gamesUpToNow.filter(g => g.gameSession.winnerId === game.playerId).length;
+      const gamesWon = gamesUpToNow.filter(g => g.gameSessionId === game.playerId).length;
       const winRate = (gamesWon / (index + 1)) * 100;
 
       let totalPoints = 0;

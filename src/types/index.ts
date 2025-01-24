@@ -1,7 +1,15 @@
 import { GameType, DartVariant, GameStatus } from './game';
 import type { DashboardGame } from './game';
-import type { PlayerCricketScores } from './cricket';
+import type { GameSession as BaseGameSession } from './base/game';
+import type { PlayerGame as BasePlayerGame } from './base/player';
+import type { CricketScore as BaseCricketScore } from './variants/cricket/types';
 
+// Re-export base types
+export type { BaseGameSession as GameSession };
+export type { BasePlayerGame as PlayerGame };
+export type { BaseCricketScore as CricketScore };
+
+// Export other types
 export interface UserStatistics {
   id: string;
   userId: string;
@@ -30,7 +38,7 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   statistics?: UserStatistics;
-  playerGames?: PlayerGame[];
+  playerGames?: BasePlayerGame[];
   recentActivity?: UserActivity[];
 }
 
@@ -53,7 +61,7 @@ export interface Game {
   variant: DartVariant;
   createdAt: Date;
   updatedAt: Date;
-  sessions?: GameSession[];
+  sessions?: BaseGameSession[];
 }
 
 export interface CreateGameDto {
@@ -92,44 +100,9 @@ export interface Score {
   createdAt: Date;
 }
 
-export interface CricketScore {
-  id: string;
-  scores: PlayerCricketScores;
-  createdAt: Date;
-}
-
 export interface Player {
   id: string;
   username: string;
-}
-
-export interface PlayerGame {
-  id: string;
-  playerId: string;
-  gameSessionId: string;
-  gameSession: GameSession;
-  user?: User;
-  guestPlayer?: {
-    id: string;
-    name: string;
-  };
-  scores: Score[];
-  cricketScores?: {
-    scores: PlayerCricketScores;
-  };
-  currentScore: number;
-  joinedAt: Date;
-}
-
-export interface GameSession {
-  id: string;
-  gameId: string;
-  game: Game;
-  players: PlayerGame[];
-  status: GameStatus;
-  winnerId?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface LeaderboardEntry {
