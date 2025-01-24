@@ -256,7 +256,8 @@ const GameSession: React.FC = () => {
             status: response.data.data.status,
             currentPlayerIndex: response.data.data.currentPlayerIndex,
             lastUpdateTimestamp: response.data.data.lastUpdateTimestamp,
-            variant: 'AROUND_THE_CLOCK'
+            variant: 'AROUND_THE_CLOCK',
+            winner: response.data.data.winner
           } as AroundTheClockGameState;
         });
       }
