@@ -18,6 +18,7 @@
 
 import React, { useState } from 'react';
 import { CricketGameState } from '../../types/variants/cricket/types';
+import { GameStatus } from '../../types/game';
 
 /**
  * Props du composant CricketDartBoard
@@ -402,8 +403,8 @@ const CricketDartBoard: React.FC<CricketDartBoardProps> = ({
         {/* Bouton de validation */}
         <button
           onClick={handleValidateScore}
-          className={`game-button ${dartHits.length < 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
-          disabled={dartHits.length < 3}
+          className={`game-button ${dartHits.length < 3 && gameState.gameStatus === GameStatus.IN_PROGRESS ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={dartHits.length < 3 && gameState.gameStatus === GameStatus.IN_PROGRESS}
         >
           Valider le score
         </button>

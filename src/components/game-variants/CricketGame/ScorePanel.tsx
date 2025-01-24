@@ -2,11 +2,11 @@ import React from 'react';
 import { CricketGameState } from '../../../types/variants/cricket/types';
 
 interface ScorePanelProps {
-  players: CricketGameState['players'];
-  activePlayerId: string;
+  gameState: CricketGameState;
+  activePlayerIndex: number;
 }
 
-const ScorePanel: React.FC<ScorePanelProps> = ({ players, activePlayerId }) => {
+const ScorePanel: React.FC<ScorePanelProps> = ({ gameState, activePlayerIndex }) => {
   // Les cibles du Cricket dans l'ordre
   const targets = [20, 19, 18, 17, 16, 15, 25];
 
@@ -17,6 +17,8 @@ const ScorePanel: React.FC<ScorePanelProps> = ({ players, activePlayerId }) => {
     if (hits === 2) return 'X';
     return '●';
   };
+
+  const currentPlayer = gameState.players[activePlayerIndex];
 
   return (
     <div className="bg-[var(--glass-bg)] rounded-lg p-4">
@@ -33,11 +35,11 @@ const ScorePanel: React.FC<ScorePanelProps> = ({ players, activePlayerId }) => {
         </div>
 
         {/* Scores des joueurs */}
-        {players.map((player) => (
+        {gameState.players.map(player => (
           <div
             key={player.id}
             className={`grid grid-cols-[2fr,repeat(7,1fr)] gap-2 items-center py-2 ${
-              player.id === activePlayerId
+              player.id === currentPlayer?.id
                 ? 'bg-[var(--neon-primary)]/10 rounded-lg border border-[var(--neon-primary)] px-2'
                 : ''
             }`}
@@ -50,7 +52,7 @@ const ScorePanel: React.FC<ScorePanelProps> = ({ players, activePlayerId }) => {
 
             {/* Hits pour chaque cible */}
             {targets.map(target => {
-              const score = player.scores[target];
+              const score = player.scores[target.toString()];
               const hits = score?.hits || 0;
               const points = score?.points || 0;
               const isClosed = hits >= 3;

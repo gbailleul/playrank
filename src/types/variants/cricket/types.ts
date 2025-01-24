@@ -59,4 +59,14 @@ export interface CricketScoreResponse {
   cricketScore: {
     scores: Record<string, CricketScoreTarget>;
   };
-} 
+}
+
+export const DEFAULT_CRICKET_SCORES: Record<string, CricketScoreTarget> = {
+  "15": { hits: 0, points: 0 },
+  "16": { hits: 0, points: 0 },
+  "17": { hits: 0, points: 0 },
+  "18": { hits: 0, points: 0 },
+  "19": { hits: 0, points: 0 },
+  "20": { hits: 0, points: 0 },
+  "25": { hits: 0, points: 0 }
+}; 

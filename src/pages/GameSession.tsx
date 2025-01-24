@@ -19,17 +19,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DartVariant, GameStatus } from '../types/game';
 import AroundTheClockGame from '../components/game-variants/AroundTheClockGame';
-import { CricketGame } from '../components/game-variants/CricketGame';
+import CricketGame from '../components/game-variants/CricketGame';
 import { ClassicGame } from '../components/game-variants/ClassicGame';
 import GameLayout from '../components/shared/GameLayout';
 import { useGameSession } from '../hooks/useGameSession';
 import { useGameState } from '../hooks/useGameState';
 import { useGameWebSocket, GameUpdateEvent } from '../hooks/useGameWebSocket';
 import { gameService } from '../api/services';
-import type { CricketThrow, CricketGameState } from '../types/variants/cricket/types';
+import type { CricketThrow, CricketGameState, CricketPlayerState, CricketScoreTarget } from '../types/variants/cricket/types';
+import { DEFAULT_CRICKET_SCORES } from '../types/variants/cricket/types';
 import type { AroundTheClockThrow, AroundTheClockGameState, AroundTheClockPlayerState } from '../types/variants/aroundTheClock/types';
 import type { ClassicGameState, ClassicPlayerState } from '../types/variants/classic/types';
 import { Score, GameScoreResponse } from '../types/base/score';
+import type { CricketScoreResponse } from '../types/base/game';
+import type { PlayerCricketScores } from '../types/cricket';
 
 
 const GameSession: React.FC = () => {
@@ -130,17 +133,34 @@ const GameSession: React.FC = () => {
   };
 
   const handleCricketScore = async (throws: CricketThrow[]) => {
-    if (!session || !gameState) {
+    if (!session || !gameState || isSubmitting) {
       return;
     }
 
     try {
+      setIsSubmitting(true);
       const sessionPlayer = session.players[activePlayerIndex];
       const playerId = sessionPlayer.user?.id || sessionPlayer.guestPlayer?.id;
 
       if (!playerId) {
         return;
       }
+
+      console.log('Current session players:', session.players.map(p => ({
+        id: p.user?.id || p.guestPlayer?.id,
+        name: p.user?.username || p.guestPlayer?.name
+      })));
+      console.log('Active player index:', activePlayerIndex);
+      console.log('Active player:', {
+        id: playerId,
+        name: sessionPlayer.user?.username || sessionPlayer.guestPlayer?.name
+      });
+      console.log('Submitting cricket score:', {
+        playerId,
+        throws,
+        activePlayerIndex,
+        turnNumber: 1
+      });
 
       const response = await gameService.addCricketScore(session.game.id, session.id, {
         playerId,
@@ -149,23 +169,30 @@ const GameSession: React.FC = () => {
         turnNumber: 1
       });
 
+      // Mise à jour immédiate avec la réponse du serveur
       if (response.data) {
+        console.log('Raw response data:', response.data);
+        console.log('Players data:', response.data.players);
         const { players, currentPlayerIndex, gameStatus, winner } = response.data;
         
-        // Map the players data exactly as received from the server
-        const updatedGameState: CricketGameState = {
+        // Utiliser directement les joueurs de la réponse du serveur
+        const cricketState: CricketGameState = {
           players: players.map(player => ({
             id: player.id,
             username: player.username,
-            scores: player.scores,
+            scores: player.scores || DEFAULT_CRICKET_SCORES,
             totalPoints: player.totalPoints
           })),
           currentPlayerIndex,
-          gameStatus,
+          gameStatus: gameStatus || 'IN_PROGRESS',
           winner
         };
 
-        setGameState(updatedGameState);
+        console.log('Final cricket state:', cricketState);
+        setGameState(cricketState);
+        
+        // Utiliser l'index du joueur renvoyé par le serveur
+        console.log('Server returned currentPlayerIndex:', currentPlayerIndex);
         setActivePlayerIndex(currentPlayerIndex);
 
         if (gameStatus === 'COMPLETED' && winner) {
@@ -175,7 +202,9 @@ const GameSession: React.FC = () => {
     } catch (error) {
       console.error('Error submitting cricket score:', error);
       setInfoMessage('Erreur lors de l\'envoi du score');
-      setTimeout(() => setInfoMessage(''), 5000);
+      setTimeout(() => setInfoMessage(''), 3000);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -291,29 +320,56 @@ const GameSession: React.FC = () => {
           return;
         }
 
-        // Forcer la mise à jour de l'état avec les nouvelles données
-        const updatedGameState: ClassicGameState = {
-          players: players.map(player => ({
-            id: player.id,
-            username: player.username,
-            scores: player.scores.map(score => ({
-              id: score.id,
-              points: score.points,
-              turnNumber: score.turnNumber,
-              createdAt: new Date(score.createdAt),
-              isDouble: score.isDouble || false
-            })).sort((a, b) => b.turnNumber - a.turnNumber),
-            currentScore: player.currentScore
-          })),
-          currentPlayerIndex: currentPlayerIndex || 0,
-          gameStatus: gameStatus || 'IN_PROGRESS',
-          winner: winner
-        };
+        // Pour les jeux Classic, on laisse la mise à jour se faire via handleClassicScore
+        if (gameVariant === DartVariant.FIVE_HUNDRED_ONE || 
+            gameVariant === DartVariant.THREE_HUNDRED_ONE) {
+          console.log('Classic game update - handled by handleClassicScore');
+          return;
+        }
 
-        // Mise à jour forcée sans vérification
-        console.log('Forcing game state update from WebSocket:', updatedGameState);
-        setGameState(updatedGameState);
-        setActivePlayerIndex(currentPlayerIndex || 0);
+        // Pour Cricket, on met à jour immédiatement avec la réponse
+        if (gameVariant === DartVariant.CRICKET) {
+          console.log('WebSocket event data:', event.score);
+          console.log('WebSocket players data:', event.score.players);
+          
+          // Récupérer l'ordre des joueurs de la session
+          const sessionPlayerIds = session.players.map(p => p.user?.id || p.guestPlayer?.id);
+          console.log('Session player order:', sessionPlayerIds);
+          
+          // Mapper d'abord les joueurs avec leurs scores
+          const mappedPlayers = players.map(player => {
+            console.log('Processing WebSocket player:', player);
+            console.log('WebSocket player scores:', player.scores);
+            const playerScores = player.scores || DEFAULT_CRICKET_SCORES;
+            return {
+              id: player.id,
+              username: player.username,
+              scores: playerScores as PlayerCricketScores,
+              totalPoints: Object.values(playerScores)
+                .reduce((sum, score) => sum + (score.points || 0), 0)
+            };
+          });
+
+          console.log('Mapped WebSocket players:', mappedPlayers);
+          
+          // Réorganiser les joueurs selon l'ordre de la session
+          const reorderedPlayers = sessionPlayerIds
+            .map(id => mappedPlayers.find(p => p.id === id))
+            .filter((player): player is CricketPlayerState => player !== undefined);
+          
+          console.log('Final reordered WebSocket players:', reorderedPlayers);
+          
+          const cricketState: CricketGameState = {
+            players: reorderedPlayers,
+            currentPlayerIndex: currentPlayerIndex || 0,
+            gameStatus: gameStatus || 'IN_PROGRESS',
+            winner: winner
+          };
+          
+          console.log('Final WebSocket cricket state:', cricketState);
+          setGameState(cricketState);
+          setActivePlayerIndex(currentPlayerIndex || 0);
+        }
 
         if (gameStatus === GameStatus.COMPLETED && winner && typeof winner === 'string') {
           handleEndGame(winner);
@@ -325,7 +381,7 @@ const GameSession: React.FC = () => {
       console.log('Cleaning up WebSocket event handlers');
       unsubscribe();
     };
-  }, [isConnected, subscribe, session]);
+  }, [isConnected, subscribe, session, gameVariant]);
 
   if (loading) {
     return (
