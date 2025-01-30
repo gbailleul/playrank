@@ -10,7 +10,7 @@ interface ClassicGameProps {
   session: GameSession;
   gameState: ClassicGameState;
   activePlayerIndex: number;
-  onScoreSubmit: (score: number, isDouble: boolean) => Promise<void>;
+  onScoreSubmit: (score: number, isDouble: boolean, isTriple: boolean) => Promise<void>;
 }
 
 export const ClassicGame: React.FC<ClassicGameProps> = ({
@@ -54,12 +54,12 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
     }
   }, [gameState.gameStatus, gameState.winner, session.players]);
 
-  const handleScoreSubmit = async (points: number, isDouble: boolean = false) => {
+  const handleScoreSubmit = async (points: number, isDouble: boolean, isTriple: boolean) => {
     if (isSubmitting) return;
     
     setIsSubmitting(true);
     try {
-      await onScoreSubmit(points, isDouble);
+      await onScoreSubmit(points, isDouble, isTriple);
     } finally {
       setIsSubmitting(false);
     }
@@ -75,6 +75,7 @@ export const ClassicGame: React.FC<ClassicGameProps> = ({
         <ScorePanel
           gameState={gameState}
           activePlayerIndex={activePlayerIndex}
+          session={session}
         />
         <div className="mt-8 w-full max-w-md mx-auto">
           <DartBoard onScoreSelect={handleScoreSubmit} />

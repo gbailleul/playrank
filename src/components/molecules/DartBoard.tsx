@@ -5,7 +5,7 @@ import React, { useState } from 'react';
  * @param onScoreSelect Callback appelé quand un score est sélectionné
  */
 interface DartBoardProps {
-  onScoreSelect: (score: number, isDouble: boolean) => void;
+  onScoreSelect: (score: number, isDouble: boolean, isTriple: boolean) => void;
 }
 
 interface DartHit {
@@ -56,9 +56,10 @@ const DartBoard: React.FC<DartBoardProps> = ({ onScoreSelect }) => {
     // Calculer le score total des 3 fléchettes
     const totalScore = dartHits.reduce((sum, hit) => sum + (hit.score * hit.multiplier), 0);
     // Vérifier si l'un des lancers est un double ou un triple
-    const hasMultiplier = dartHits.some(hit => hit.multiplier >= 2);
-    // Appeler la fonction du parent avec le score total et l'info du multiplicateur
-    onScoreSelect(totalScore, hasMultiplier);
+    const isDouble = dartHits.some(hit => hit.multiplier === 2);
+    const isTriple = dartHits.some(hit => hit.multiplier === 3);
+    // Appeler la fonction du parent avec le score total et les infos de multiplicateur
+    onScoreSelect(totalScore, isDouble, isTriple);
     // Réinitialiser les fléchettes
     setDartHits([]);
   };

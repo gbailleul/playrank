@@ -68,7 +68,7 @@ const GameSession: React.FC = () => {
   const { subscribe, isConnected } = useGameWebSocket(gameRef, user);
 
   // Gestionnaires d'événements
-  const handleClassicScore = async (points: number) => {
+  const handleClassicScore = async (points: number, isDouble: boolean, isTriple: boolean) => {
     if (!session || !gameState || isSubmitting) {
       return;
     }
@@ -87,12 +87,14 @@ const GameSession: React.FC = () => {
         ? (player as ClassicPlayerState)?.scores?.length || 0
         : 0;
 
-      // Envoyer le score au serveur
+      // Envoyer le score au serveur avec les informations de double et triple
       const response = await gameService.addScore(session.game.id, session.id, {
         playerId,
         points,
         turnNumber: turnNumber + 1,
-        activePlayerIndex
+        activePlayerIndex,
+        isDouble,
+        isTriple
       });
 
       // Mettre à jour l'état immédiatement avec la réponse
