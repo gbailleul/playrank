@@ -1,17 +1,12 @@
 import React, { useMemo } from 'react';
 import { Score } from '../../../types/base/game';
-import { ClassicGameState, ClassicPlayerState } from '../../../types/variants/classic/types';
+import { ClassicGameState } from '../../../types/variants/classic/types';
 import { GameSession } from '../../../types/base/game';
 
 interface ScorePanelProps {
   gameState: ClassicGameState;
   activePlayerIndex: number;
   session: GameSession;
-}
-
-interface PlayerScoreData {
-  playerState: ClassicPlayerState;
-  sortedScores: Score[];
 }
 
 const ScorePanel: React.FC<ScorePanelProps> = React.memo(({ gameState, activePlayerIndex, session }) => {
@@ -50,7 +45,7 @@ const ScorePanel: React.FC<ScorePanelProps> = React.memo(({ gameState, activePla
 
   return (
     <div className="grid gap-4">
-      {playerScores.map(({ playerState, sortedScores }, index) => (
+      {playerScores.map(({ playerState, sortedScores }) => (
         <div
           key={playerState.id}
           className={`p-4 rounded-lg ${
