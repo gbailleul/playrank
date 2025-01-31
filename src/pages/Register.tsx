@@ -53,7 +53,7 @@ const Register: React.FC = () => {
     } else if (formData.username.length < 3) {
       newErrors.username = 'Le pseudo doit contenir au moins 3 caractères';
       isValid = false;
-    } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.username)) {
+    } else if (!/^[a-zA-ZÀ-ÿ0-9_-]+$/.test(formData.username)) {
       newErrors.username = 'Le pseudo ne peut contenir que des lettres, chiffres, tirets et underscores';
       isValid = false;
     }
@@ -65,7 +65,7 @@ const Register: React.FC = () => {
     } else if (formData.firstName.length < 2) {
       newErrors.firstName = 'Le prénom doit contenir au moins 2 caractères';
       isValid = false;
-    } else if (!/^[a-zA-Z\s-]+$/.test(formData.firstName)) {
+    } else if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(formData.firstName)) {
       newErrors.firstName = 'Le prénom ne peut contenir que des lettres, espaces et tirets';
       isValid = false;
     }
@@ -77,7 +77,7 @@ const Register: React.FC = () => {
     } else if (formData.lastName.length < 2) {
       newErrors.lastName = 'Le nom doit contenir au moins 2 caractères';
       isValid = false;
-    } else if (!/^[a-zA-Z\s-]+$/.test(formData.lastName)) {
+    } else if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(formData.lastName)) {
       newErrors.lastName = 'Le nom ne peut contenir que des lettres, espaces et tirets';
       isValid = false;
     }
